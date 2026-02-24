@@ -1,14 +1,251 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stake Clone - Casino & Sports Betting</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Using Google Fonts for Inter (similar to Stake's font) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
+
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fa-solid fa-layer-group"></i> STAKE
+                </div>
+                <button class="icon-btn" id="sidebar-toggle">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <a href="#" class="nav-item active" data-target="casino">
+                        <i class="fa-solid fa-gamepad"></i>
+                        <span>카지노</span>
+                    </a>
+                    <a href="#" class="nav-item" data-target="sports">
+                        <i class="fa-solid fa-futbol"></i>
+                        <span>스포츠</span>
+                    </a>
+                    <a href="#" class="nav-item" id="open-support">
+                        <i class="fa-solid fa-headset"></i>
+                        <span>고객지원</span>
+                    </a>
+                </div>
+
+                <div class="nav-divider"></div>
+
+                <div class="nav-section">
+                    <div class="nav-label">즐겨찾기</div>
+                    <a href="#" class="nav-item">
+                        <i class="fa-solid fa-fire"></i>
+                        <span>인기 게임</span>
+                    </a>
+                    <a href="#" class="nav-item" id="nav-tetris">
+                        <i class="fa-solid fa-shapes"></i>
+                        <span>테트리스 배틀</span>
+                    </a>
+                </div>
+
+                <div class="nav-divider"></div>
+
+                <div class="nav-section">
+                    <div class="nav-label">게임</div>
+                    <a href="#" class="nav-item">
+                        <i class="fa-solid fa-dice"></i>
+                        <span>Stake 오리지널</span>
+                    </a>
+                    <a href="#" class="nav-item">
+                        <i class="fa-solid fa-slot-machine"></i>
+                        <span>슬롯</span>
+                    </a>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="lang-select">
+                    <i class="fa-solid fa-globe"></i> 한국어
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Wrapper -->
+        <div class="main-wrapper">
+            <!-- Header -->
+            <header class="top-bar">
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="게임, 제공사, 통화 검색...">
+                </div>
+
+                <div class="user-actions">
+                    <div class="wallet-display">
+                        <span class="currency">₩</span>
+                        <span class="amount">1,000.00</span>
+                        <button class="btn-deposit">지갑</button>
+                    </div>
+                    <button class="icon-btn chat-toggle" id="chat-toggle">
+                        <i class="fa-solid fa-comments"></i>
+                    </button>
+                    <button class="btn-primary">로그인</button>
+                    <button class="btn-accent">회원가입</button>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <main class="content-area">
+                
+                <!-- Casino Home View -->
+                <div id="casino-view" class="view-section active">
+                    <!-- Hero Banners -->
+                    <section class="hero-section">
+                        <div class="banner-card">
+                            <div class="banner-content">
+                                <span class="tag">독점</span>
+                                <h1>Tetris Battle Royale</h1>
+                                <p>친구들과 대결하고 상금을 획득하세요!</p>
+                                <button class="btn-white" onclick="document.getElementById('nav-tetris').click()">지금 플레이</button>
+                            </div>
+                            <div class="banner-image-placeholder">
+                                <i class="fa-solid fa-shapes"></i>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Stake Originals -->
+                    <section class="game-category">
+                        <div class="category-header">
+                            <h2><i class="fa-solid fa-star"></i> Stake 오리지널</h2>
+                            <a href="#" class="view-all">모두 보기</a>
+                        </div>
+                        <div class="game-grid">
+                            <div class="game-card original tetris-trigger" style="--card-color: #00e701;">
+                                <div class="card-icon"><i class="fa-solid fa-shapes"></i></div>
+                                <div class="card-name">Tetris</div>
+                            </div>
+                            <div class="game-card original" style="--card-color: #ff4d4d;">
+                                <div class="card-icon"><i class="fa-solid fa-bomb"></i></div>
+                                <div class="card-name">Mines</div>
+                            </div>
+                            <div class="game-card original" style="--card-color: #3b82f6;">
+                                <div class="card-icon"><i class="fa-solid fa-dice"></i></div>
+                                <div class="card-name">Dice</div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Tetris View -->
+                <div id="tetris-view" class="view-section">
+                    <div class="tetris-container">
+                        <div class="game-header">
+                            <h2><i class="fa-solid fa-shapes"></i> Tetris Battle</h2>
+                            <div class="pvp-status">
+                                <span class="status-dot"></span> 1,240명 접속 중
+                            </div>
+                        </div>
+                        
+                        <div class="game-layout">
+                            <div class="game-sidebar left">
+                                <div class="stat-box">
+                                    <label>점수</label>
+                                    <div id="score">0</div>
+                                </div>
+                                <div class="stat-box">
+                                    <label>레벨</label>
+                                    <div id="level">1</div>
+                                </div>
+                                <div class="stat-box next-piece">
+                                    <label>다음</label>
+                                    <canvas id="next" width="80" height="80"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="canvas-wrapper">
+                                <canvas id="tetris" width="240" height="400"></canvas>
+                                <div id="game-overlay" class="game-overlay">
+                                    <button class="btn-accent" id="start-btn">게임 시작</button>
+                                </div>
+                            </div>
+
+                            <div class="game-sidebar right">
+                                <div class="stat-box pvp-box">
+                                    <label>상대 플레이어</label>
+                                    <div class="opponent-placeholder">
+                                        <i class="fa-solid fa-user-secret"></i>
+                                        <span>상대 대기 중...</span>
+                                    </div>
+                                    <button class="btn-small">매칭 찾기</button>
+                                </div>
+                                <div class="controls-info">
+                                    <p>← → : 이동</p>
+                                    <p>↑ : 회전</p>
+                                    <p>↓ : 빠르게</p>
+                                    <p>Space : 즉시 낙하</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Chat Sidebar -->
+            <aside class="chat-sidebar" id="chat-sidebar">
+                <div class="chat-header">
+                    <span><i class="fa-solid fa-comments"></i> 실시간 채팅</span>
+                    <button class="icon-btn" id="close-chat"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="chat-messages" id="chat-messages">
+                    <!-- Messages will be injected here -->
+                    <div class="message system">Stake 채팅에 오신 것을 환영합니다!</div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="메시지를 입력하세요...">
+                    <button id="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </aside>
+        </div>
+    </div>
+
+    <!-- Support Modal -->
+    <div class="modal-overlay" id="support-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>고객지원 / 문의하기</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form action="https://formspree.io/f/xjgepnep" method="POST" class="support-form">
+                <div class="form-group">
+                    <label>이메일 주소</label>
+                    <input type="email" name="email" placeholder="email@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label>문의 유형</label>
+                    <select name="type">
+                        <option value="general">일반 문의</option>
+                        <option value="bug">버그 제보</option>
+                        <option value="payment">결제/출금</option>
+                        <option value="event">이벤트 문의</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>메시지</label>
+                    <textarea name="message" rows="5" placeholder="문의하실 내용을 입력해주세요..." required></textarea>
+                </div>
+                <button type="submit" class="btn-accent full-width">보내기</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="main.js"></script>
 </body>
 </html>

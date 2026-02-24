@@ -17,141 +17,249 @@
     <header class="app-header">
         <div class="header-left">
             <div class="logo">
-                <h1>푸푸 테트리스</h1>
-                <p>Pupu Tetris</p>
+                <span class="logo-icon">🕹️</span>
+                <div class="logo-text">
+                    <h1>PUPU BET</h1>
+                    <p>PREMIUM TETRIS</p>
+                </div>
             </div>
         </div>
         <div class="header-center">
             <div id="jackpot-banner" class="jackpot-banner">
-                <span class="jackpot-label">💰 잭팟 (Jackpot):</span>
-                <span id="jackpot-amount" class="jackpot-value">0</span>
-                <span class="jackpot-unit">USDT</span>
+                <div class="jackpot-icon">🔥</div>
+                <div class="jackpot-info">
+                    <span class="jackpot-label">GLOBAL JACKPOT</span>
+                    <div class="jackpot-amount-wrapper">
+                        <span id="jackpot-amount" class="jackpot-value">0</span>
+                        <span class="jackpot-unit">USDT</span>
+                    </div>
+                </div>
             </div>
         </div>
         <div class="header-right">
-            <button id="dark-mode-toggle" class="icon-btn" title="다크 모드">🌓</button>
-            <div id="auth-section" class="auth-section">
-                <button id="login-btn" class="login-btn">로그인</button>
+            <div class="header-actions">
+                <button id="dark-mode-toggle" class="icon-btn" title="Toggle Theme">🌓</button>
+                <div id="auth-section" class="auth-section">
+                    <button id="login-btn" class="login-btn">
+                        <span class="btn-icon">👤</span>
+                        <span class="btn-text">LOGIN</span>
+                    </button>
+                </div>
             </div>
         </div>
     </header>
 
     <div class="app-container">
-        <!-- Sidebar / Info Panel -->
-        <aside class="game-info">
-            <div class="user-profile stats-card" id="user-profile">
-                <div class="user-header">
-                    <div class="user-avatar">👤</div>
-                    <div class="user-name-info">
-                        <span class="label">플레이어</span>
-                        <span class="value" id="display-name">Guest</span>
+        <!-- Left Sidebar: Profile & Stats -->
+        <aside class="side-panel left-panel">
+            <div class="user-card profile-card" id="user-profile">
+                <div class="card-header">
+                    <div class="user-avatar-wrapper">
+                        <div class="user-avatar">👤</div>
+                        <div class="status-indicator online"></div>
                     </div>
-                </div>
-                <div class="balance-section">
-                    <div class="stat-item">
-                        <span class="label">보유 USDT</span>
-                        <span class="value" id="user-coins">0</span>
-                    </div>
-                    <div class="wallet-actions">
-                        <button id="deposit-btn" class="deposit-btn">입금</button>
-                        <button id="withdraw-btn" class="withdraw-btn">출금</button>
+                    <div class="user-info">
+                        <span id="display-name" class="user-name">Guest Player</span>
+                        <span class="user-rank">Bronze Member</span>
                     </div>
                 </div>
                 
-                <div class="betting-controls">
-                    <label>내기 금액 (Bet)</label>
-                    <div class="bet-input-group">
+                <div class="wallet-card">
+                    <div class="wallet-balance">
+                        <span class="label">MY BALANCE</span>
+                        <div class="balance-amount">
+                            <span id="user-coins">0</span>
+                            <span class="unit">USDT</span>
+                        </div>
+                    </div>
+                    <div class="wallet-actions">
+                        <button id="deposit-btn" class="action-btn deposit">
+                            <span class="icon">📥</span> 입금
+                        </button>
+                        <button id="withdraw-btn" class="action-btn withdraw">
+                            <span class="icon">📤</span> 출금
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="bet-card">
+                    <span class="label">CURRENT BET</span>
+                    <div class="bet-input-wrapper">
                         <input type="number" id="bet-amount" value="100" min="0" step="100">
-                        <button id="set-bet-btn">설정</button>
+                        <button id="set-bet-btn">SET</button>
+                    </div>
+                    <div class="quick-bets">
+                        <button class="quick-bet-btn" data-amount="100">+100</button>
+                        <button class="quick-bet-btn" data-amount="500">+500</button>
+                        <button class="quick-bet-btn" data-amount="1000">MAX</button>
                     </div>
                 </div>
             </div>
             
-            <div class="stats-card">
-                <div class="stat-item">
-                    <span class="label">점수 (Score)</span>
-                    <span class="value" id="score">0</span>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <span class="label">SCORE</span>
+                    <span id="score" class="value">0</span>
                 </div>
-                <div class="stat-item">
-                    <span class="label">레벨 (Level)</span>
-                    <span class="value" id="level">1</span>
+                <div class="stat-box">
+                    <span class="label">LEVEL</span>
+                    <span id="level" class="value">1</span>
                 </div>
-                <div class="stat-item">
-                    <span class="label">지운 줄 (Lines)</span>
-                    <span class="value" id="lines">0</span>
-                </div>
-            </div>
-
-            <div class="next-hold-container">
-                <div class="preview-box">
-                    <span class="label">다음 (Next)</span>
-                    <canvas id="next-canvas" width="100" height="100"></canvas>
-                </div>
-                <div class="preview-box">
-                    <span class="label">보관 (Hold - Z)</span>
-                    <canvas id="hold-canvas" width="100" height="100"></canvas>
+                <div class="stat-box">
+                    <span class="label">LINES</span>
+                    <span id="lines" class="value">0</span>
                 </div>
             </div>
 
-            <div class="controls-guide">
-                <h3>조작법</h3>
-                <ul>
-                    <li><span>← →</span> 이동</li>
-                    <li><span>↑</span> 회전</li>
-                    <li><span>↓</span> 소프트 드롭</li>
-                    <li><span>Space</span> 하드 드롭</li>
-                    <li><span>Z</span> 보관/교체</li>
-                </ul>
-            </div>
-            
-            <div class="adsense-placeholder">
-                <!-- Google AdSense Placeholder -->
-                <div class="ad-text">광고 영역 (AdSpace)</div>
+            <div class="preview-section">
+                <div class="preview-card">
+                    <span class="label">NEXT</span>
+                    <div class="canvas-wrapper">
+                        <canvas id="next-canvas" width="100" height="100"></canvas>
+                    </div>
+                </div>
+                <div class="preview-card">
+                    <span class="label">HOLD (Z)</span>
+                    <div class="canvas-wrapper">
+                        <canvas id="hold-canvas" width="100" height="100"></canvas>
+                    </div>
+                </div>
             </div>
         </aside>
 
         <!-- Main Game Area -->
-        <main class="game-area">
-            <div class="game-board-container">
-                <canvas id="tetris-canvas" width="400" height="800"></canvas>
-                <div id="game-overlay" class="overlay">
-                    <div class="overlay-content">
-                        <h2>Game Over</h2>
-                        <p>점수: <span id="final-score">0</span></p>
-                        <button id="restart-btn">다시 시작</button>
+        <main class="game-main">
+            <div class="game-board-frame">
+                <div class="board-header">
+                    <div class="board-title">GAME BOARD</div>
+                    <div class="board-status">LIVE</div>
+                </div>
+                <div class="canvas-container">
+                    <canvas id="tetris-canvas" width="400" height="800"></canvas>
+                    
+                    <div id="game-overlay" class="game-overlay">
+                        <div class="overlay-box">
+                            <h2 class="title">GAME OVER</h2>
+                            <div class="result-stats">
+                                <div class="res-item">
+                                    <span>FINAL SCORE</span>
+                                    <span id="final-score">0</span>
+                                </div>
+                            </div>
+                            <button id="restart-btn" class="primary-btn">PLAY AGAIN</button>
+                        </div>
+                    </div>
+                    
+                    <div id="start-overlay" class="game-overlay active">
+                        <div class="overlay-box">
+                            <h2 class="title">PUPU TETRIS</h2>
+                            <p class="subtitle">READY TO WIN?</p>
+                            <button id="start-btn" class="primary-btn">START GAME</button>
+                        </div>
                     </div>
                 </div>
-                <div id="start-overlay" class="overlay active">
-                    <div class="overlay-content">
-                        <h2>푸푸 테트리스</h2>
-                        <p>준비 되셨나요?</p>
-                        <button id="start-btn">게임 시작</button>
-                    </div>
+                <div class="controls-hint">
+                    <div class="hint"><span>←→</span> MOVE</div>
+                    <div class="hint"><span>↑</span> ROTATE</div>
+                    <div class="hint"><span>↓</span> DROP</div>
+                    <div class="hint"><span>SPACE</span> HARD DROP</div>
                 </div>
             </div>
         </main>
 
-        <!-- Chat / Multiplayer Panel -->
-        <aside class="chat-panel">
-            <div class="chat-header">
-                <h3>실시간 채팅</h3>
+        <!-- Right Sidebar: Chat & History -->
+        <aside class="side-panel right-panel">
+            <div class="chat-container">
+                <div class="panel-header">
+                    <h3>LIVE CHAT</h3>
+                    <span class="online-count">● 124 Online</span>
+                </div>
+                <div class="chat-messages" id="chat-messages">
+                    <div class="message system">Welcome to Pupu Bet!</div>
+                </div>
+                <div class="chat-footer">
+                    <input type="text" id="chat-input" placeholder="Type a message..." maxlength="100">
+                    <button id="send-btn">SEND</button>
+                </div>
             </div>
-            <div class="chat-messages" id="chat-messages">
-                <div class="message system">환영합니다! 매너 채팅 부탁드립니다.</div>
-            </div>
-            <div class="chat-input">
-                <input type="text" id="chat-input" placeholder="메시지 입력..." maxlength="100">
-                <button id="send-btn">전송</button>
+            
+            <div class="ads-card">
+                <div class="ad-placeholder">
+                    <span>ADVERTISEMENT</span>
+                </div>
             </div>
         </aside>
     </div>
 
+    <!-- Deposit Modal -->
+    <div id="deposit-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>DEPOSIT USDT (TRC20)</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="qr-section">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=TWhG7U5v6N8j9kL2m3n4p5q6r7s8t9u0v1" alt="QR Code" id="deposit-qr">
+                    <p class="qr-hint">Scan to deposit USDT</p>
+                </div>
+                <div class="address-section">
+                    <label>Wallet Address</label>
+                    <div class="copy-input">
+                        <input type="text" id="deposit-address" value="TWhG7U5v6N8j9kL2m3n4p5q6r7s8t9u0v1" readonly>
+                        <button id="copy-address-btn">COPY</button>
+                    </div>
+                </div>
+                <div class="deposit-notice">
+                    <ul>
+                        <li>Minimum deposit: 10 USDT</li>
+                        <li>Network: TRON (TRC20) only</li>
+                        <li>Deposits are confirmed after 1 block</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdraw Modal -->
+    <div id="withdraw-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>WITHDRAW USDT</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="withdraw-form">
+                    <div class="form-group">
+                        <label>Recipient Address (TRC20)</label>
+                        <input type="text" id="withdraw-address" placeholder="Enter your TRC20 wallet address">
+                    </div>
+                    <div class="form-group">
+                        <label>Amount to Withdraw</label>
+                        <div class="amount-input">
+                            <input type="number" id="withdraw-amount" placeholder="0.00">
+                            <span class="unit">USDT</span>
+                        </div>
+                        <div class="balance-hint">Available: <span id="modal-user-coins">0</span> USDT</div>
+                    </div>
+                    <button id="confirm-withdraw-btn" class="primary-btn">CONFIRM WITHDRAWAL</button>
+                </div>
+                <div class="withdraw-notice">
+                    <p>※ Withdrawal requests are processed within 24 hours.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer class="app-footer">
-        <div class="footer-content">
-            <span>&copy; 2026 푸푸 테트리스. All rights reserved.</span>
-            <div class="footer-links">
-                <a href="#">이용약관</a>
-                <a href="#">개인정보처리방침</a>
+        <div class="footer-inner">
+            <div class="footer-left">
+                &copy; 2026 PUPU BET PREMIUM.
+            </div>
+            <div class="footer-right">
+                <a href="#">Terms</a>
+                <a href="#">Privacy</a>
+                <a href="#">Support</a>
             </div>
         </div>
     </footer>

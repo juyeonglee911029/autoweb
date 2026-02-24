@@ -14,33 +14,56 @@
 </head>
 <body>
 
-    <div class="app-container">
-        <!-- Sidebar / Info Panel -->
-        <aside class="game-info">
+    <header class="app-header">
+        <div class="header-left">
             <div class="logo">
                 <h1>푸푸 테트리스</h1>
                 <p>Pupu Tetris</p>
             </div>
+        </div>
+        <div class="header-center">
+            <div id="jackpot-banner" class="jackpot-banner">
+                <span class="jackpot-label">💰 잭팟 (Jackpot):</span>
+                <span id="jackpot-amount" class="jackpot-value">0</span>
+                <span class="jackpot-unit">USDT</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <button id="dark-mode-toggle" class="icon-btn" title="다크 모드">🌓</button>
+            <div id="auth-section" class="auth-section">
+                <button id="login-btn" class="login-btn">로그인</button>
+            </div>
+        </div>
+    </header>
 
-            <div class="user-profile stats-card" id="user-profile" style="display: none;">
-                <div class="stat-item">
-                    <span class="label">플레이어</span>
-                    <span class="value" id="display-name">Guest</span>
-                </div>
-                <div class="stat-item">
-                    <span class="label">보유 코인</span>
-                    <span class="value" id="user-coins">0</span>
-                </div>
-                <div class="betting-controls" style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
-                    <label style="font-size: 0.8rem; color: #666;">내기 금액 (Bet)</label>
-                    <div style="display: flex; gap: 5px; margin-top: 5px;">
-                        <input type="number" id="bet-amount" value="100" min="0" step="100" style="width: 70px; padding: 5px; border-radius: 5px; border: 1px solid #ddd;">
-                        <button id="set-bet-btn" style="padding: 5px 10px; font-size: 0.8rem;">설정</button>
+    <div class="app-container">
+        <!-- Sidebar / Info Panel -->
+        <aside class="game-info">
+            <div class="user-profile stats-card" id="user-profile">
+                <div class="user-header">
+                    <div class="user-avatar">👤</div>
+                    <div class="user-name-info">
+                        <span class="label">플레이어</span>
+                        <span class="value" id="display-name">Guest</span>
                     </div>
                 </div>
-                <div class="wallet-actions" style="display: flex; gap: 5px; margin-top: 10px;">
-                    <button id="deposit-btn" style="flex: 1; padding: 5px; font-size: 0.7rem; background: #00b894;">입금</button>
-                    <button id="withdraw-btn" style="flex: 1; padding: 5px; font-size: 0.7rem; background: #d63031;">출금</button>
+                <div class="balance-section">
+                    <div class="stat-item">
+                        <span class="label">보유 USDT</span>
+                        <span class="value" id="user-coins">0</span>
+                    </div>
+                    <div class="wallet-actions">
+                        <button id="deposit-btn" class="deposit-btn">입금</button>
+                        <button id="withdraw-btn" class="withdraw-btn">출금</button>
+                    </div>
+                </div>
+                
+                <div class="betting-controls">
+                    <label>내기 금액 (Bet)</label>
+                    <div class="bet-input-group">
+                        <input type="number" id="bet-amount" value="100" min="0" step="100">
+                        <button id="set-bet-btn">설정</button>
+                    </div>
                 </div>
             </div>
             

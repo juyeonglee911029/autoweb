@@ -1,0 +1,13 @@
+{
+  "name": "pupu-tetris",
+  "version": "1.0.0",
+  "description": "Pupu Tetris - Multiplayer Tetris with Chat",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  }
+}

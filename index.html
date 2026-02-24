@@ -3,246 +3,128 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stake Clone - Casino & Sports Betting</title>
+    <title>푸푸 테트리스 (Pupu Tetris)</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Using Google Fonts for Inter (similar to Stake's font) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap" rel="stylesheet">
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        /* Basic reset for initial load */
+        body { margin: 0; padding: 0; background: #f0f4f8; font-family: 'Fredoka', sans-serif; }
+    </style>
 </head>
 <body>
 
-    <div class="app-layout">
-        <!-- Sidebar -->
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <i class="fa-solid fa-layer-group"></i> STAKE
+    <div class="app-container">
+        <!-- Sidebar / Info Panel -->
+        <aside class="game-info">
+            <div class="logo">
+                <h1>푸푸 테트리스</h1>
+                <p>Pupu Tetris</p>
+            </div>
+            
+            <div class="stats-card">
+                <div class="stat-item">
+                    <span class="label">점수 (Score)</span>
+                    <span class="value" id="score">0</span>
                 </div>
-                <button class="icon-btn" id="sidebar-toggle">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
+                <div class="stat-item">
+                    <span class="label">레벨 (Level)</span>
+                    <span class="value" id="level">1</span>
+                </div>
+                <div class="stat-item">
+                    <span class="label">지운 줄 (Lines)</span>
+                    <span class="value" id="lines">0</span>
+                </div>
             </div>
 
-            <nav class="sidebar-nav">
-                <div class="nav-section">
-                    <a href="#" class="nav-item active" data-target="casino">
-                        <i class="fa-solid fa-gamepad"></i>
-                        <span>카지노</span>
-                    </a>
-                    <a href="#" class="nav-item" data-target="sports">
-                        <i class="fa-solid fa-futbol"></i>
-                        <span>스포츠</span>
-                    </a>
-                    <a href="#" class="nav-item" id="open-support">
-                        <i class="fa-solid fa-headset"></i>
-                        <span>고객지원</span>
-                    </a>
+            <div class="next-hold-container">
+                <div class="preview-box">
+                    <span class="label">다음 (Next)</span>
+                    <canvas id="next-canvas" width="100" height="100"></canvas>
                 </div>
-
-                <div class="nav-divider"></div>
-
-                <div class="nav-section">
-                    <div class="nav-label">즐겨찾기</div>
-                    <a href="#" class="nav-item">
-                        <i class="fa-solid fa-fire"></i>
-                        <span>인기 게임</span>
-                    </a>
-                    <a href="#" class="nav-item" id="nav-tetris">
-                        <i class="fa-solid fa-shapes"></i>
-                        <span>테트리스 배틀</span>
-                    </a>
+                <div class="preview-box">
+                    <span class="label">보관 (Hold - Z)</span>
+                    <canvas id="hold-canvas" width="100" height="100"></canvas>
                 </div>
+            </div>
 
-                <div class="nav-divider"></div>
-
-                <div class="nav-section">
-                    <div class="nav-label">게임</div>
-                    <a href="#" class="nav-item">
-                        <i class="fa-solid fa-dice"></i>
-                        <span>Stake 오리지널</span>
-                    </a>
-                    <a href="#" class="nav-item">
-                        <i class="fa-solid fa-slot-machine"></i>
-                        <span>슬롯</span>
-                    </a>
-                </div>
-            </nav>
+            <div class="controls-guide">
+                <h3>조작법</h3>
+                <ul>
+                    <li><span>← →</span> 이동</li>
+                    <li><span>↑</span> 회전</li>
+                    <li><span>↓</span> 소프트 드롭</li>
+                    <li><span>Space</span> 하드 드롭</li>
+                    <li><span>Z</span> 보관/교체</li>
+                </ul>
+            </div>
             
-            <div class="sidebar-footer">
-                <div class="lang-select">
-                    <i class="fa-solid fa-globe"></i> 한국어
-                </div>
+            <div class="adsense-placeholder">
+                <!-- Google AdSense Placeholder -->
+                <div class="ad-text">광고 영역 (AdSpace)</div>
             </div>
         </aside>
 
-        <!-- Main Content Wrapper -->
-        <div class="main-wrapper">
-            <!-- Header -->
-            <header class="top-bar">
-                <div class="search-bar">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" placeholder="게임, 제공사, 통화 검색...">
-                </div>
-
-                <div class="user-actions">
-                    <div class="wallet-display">
-                        <span class="currency">₩</span>
-                        <span class="amount">1,000.00</span>
-                        <button class="btn-deposit">지갑</button>
-                    </div>
-                    <button class="icon-btn chat-toggle" id="chat-toggle">
-                        <i class="fa-solid fa-comments"></i>
-                    </button>
-                    <button class="btn-primary">로그인</button>
-                    <button class="btn-accent">회원가입</button>
-                </div>
-            </header>
-
-            <!-- Content Area -->
-            <main class="content-area">
-                
-                <!-- Casino Home View -->
-                <div id="casino-view" class="view-section active">
-                    <!-- Hero Banners -->
-                    <section class="hero-section">
-                        <div class="banner-card">
-                            <div class="banner-content">
-                                <span class="tag">독점</span>
-                                <h1>Tetris Battle Royale</h1>
-                                <p>친구들과 대결하고 상금을 획득하세요!</p>
-                                <button class="btn-white" onclick="document.getElementById('nav-tetris').click()">지금 플레이</button>
-                            </div>
-                            <div class="banner-image-placeholder">
-                                <i class="fa-solid fa-shapes"></i>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Stake Originals -->
-                    <section class="game-category">
-                        <div class="category-header">
-                            <h2><i class="fa-solid fa-star"></i> Stake 오리지널</h2>
-                            <a href="#" class="view-all">모두 보기</a>
-                        </div>
-                        <div class="game-grid">
-                            <div class="game-card original tetris-trigger" style="--card-color: #00e701;">
-                                <div class="card-icon"><i class="fa-solid fa-shapes"></i></div>
-                                <div class="card-name">Tetris</div>
-                            </div>
-                            <div class="game-card original" style="--card-color: #ff4d4d;">
-                                <div class="card-icon"><i class="fa-solid fa-bomb"></i></div>
-                                <div class="card-name">Mines</div>
-                            </div>
-                            <div class="game-card original" style="--card-color: #3b82f6;">
-                                <div class="card-icon"><i class="fa-solid fa-dice"></i></div>
-                                <div class="card-name">Dice</div>
-                            </div>
-                        </div>
-                    </section>
-                </div>
-
-                <!-- Tetris View -->
-                <div id="tetris-view" class="view-section">
-                    <div class="tetris-container">
-                        <div class="game-header">
-                            <h2><i class="fa-solid fa-shapes"></i> Tetris Battle</h2>
-                            <div class="pvp-status">
-                                <span class="status-dot"></span> 1,240명 접속 중
-                            </div>
-                        </div>
-                        
-                        <div class="game-layout">
-                            <div class="game-sidebar left">
-                                <div class="stat-box">
-                                    <label>점수</label>
-                                    <div id="score">0</div>
-                                </div>
-                                <div class="stat-box">
-                                    <label>레벨</label>
-                                    <div id="level">1</div>
-                                </div>
-                                <div class="stat-box next-piece">
-                                    <label>다음</label>
-                                    <canvas id="next" width="80" height="80"></canvas>
-                                </div>
-                            </div>
-
-                            <div class="canvas-wrapper">
-                                <canvas id="tetris" width="240" height="400"></canvas>
-                                <div id="game-overlay" class="game-overlay">
-                                    <button class="btn-accent" id="start-btn">게임 시작</button>
-                                </div>
-                            </div>
-
-                            <div class="game-sidebar right">
-                                <div class="stat-box pvp-box">
-                                    <label>상대 플레이어</label>
-                                    <div class="opponent-placeholder">
-                                        <i class="fa-solid fa-user-secret"></i>
-                                        <span>상대 대기 중...</span>
-                                    </div>
-                                    <button class="btn-small">매칭 찾기</button>
-                                </div>
-                                <div class="controls-info">
-                                    <p>← → : 이동</p>
-                                    <p>↑ : 회전</p>
-                                    <p>↓ : 빠르게</p>
-                                    <p>Space : 즉시 낙하</p>
-                                </div>
-                            </div>
-                        </div>
+        <!-- Main Game Area -->
+        <main class="game-area">
+            <div class="game-board-container">
+                <canvas id="tetris-canvas" width="300" height="600"></canvas>
+                <div id="game-overlay" class="overlay">
+                    <div class="overlay-content">
+                        <h2>Game Over</h2>
+                        <p>점수: <span id="final-score">0</span></p>
+                        <button id="restart-btn">다시 시작</button>
                     </div>
                 </div>
-            </main>
+                <div id="start-overlay" class="overlay active">
+                    <div class="overlay-content">
+                        <h2>푸푸 테트리스</h2>
+                        <p>준비 되셨나요?</p>
+                        <button id="start-btn">게임 시작</button>
+                    </div>
+                </div>
+            </div>
+        </main>
 
-            <!-- Chat Sidebar -->
-            <aside class="chat-sidebar" id="chat-sidebar">
-                <div class="chat-header">
-                    <span><i class="fa-solid fa-comments"></i> 실시간 채팅</span>
-                    <button class="icon-btn" id="close-chat"><i class="fa-solid fa-xmark"></i></button>
-                </div>
-                <div class="chat-messages" id="chat-messages">
-                    <!-- Messages will be injected here -->
-                    <div class="message system">Stake 채팅에 오신 것을 환영합니다!</div>
-                </div>
-                <div class="chat-input-area">
-                    <input type="text" id="chat-input" placeholder="메시지를 입력하세요...">
-                    <button id="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
-                </div>
-            </aside>
-        </div>
+        <!-- Chat / Multiplayer Panel -->
+        <aside class="chat-panel">
+            <div class="chat-header">
+                <h3>실시간 채팅</h3>
+                <span id="connection-status" class="status connected">● 온라인</span>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <div class="message system">환영합니다! 매너 채팅 부탁드립니다.</div>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="chat-input" placeholder="메시지 입력..." maxlength="100">
+                <button id="send-btn">전송</button>
+            </div>
+        </aside>
     </div>
 
-    <!-- Support Modal -->
-    <div class="modal-overlay" id="support-modal">
+    <!-- AdSense / Legal Footer -->
+    <footer class="site-footer">
+        <div class="footer-content">
+            <a href="#" id="privacy-link">개인정보처리방침</a>
+            <span>|</span>
+            <a href="#" id="terms-link">이용약관</a>
+            <p>&copy; 2024 Pupu Tetris. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- Simple Modal for Privacy Policy -->
+    <div id="modal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>고객지원 / 문의하기</h3>
-                <button class="close-modal">&times;</button>
+            <span class="close-modal">&times;</span>
+            <h2>개인정보처리방침</h2>
+            <div class="modal-body">
+                <p><strong>1. 수집하는 개인정보 항목</strong><br>
+                푸푸 테트리스는 회원가입 없이 이용 가능하며, 별도의 개인정보를 저장하지 않습니다. 게임 기록은 브라우저의 로컬 스토리지에 임시 저장될 수 있습니다.</p>
+                <p><strong>2. 쿠키의 사용</strong><br>
+                사용자 경험 향상을 위해 쿠키를 사용할 수 있습니다. 쿠키는 브라우저 설정을 통해 거부할 수 있습니다.</p>
+                <p><strong>3. 광고 게재</strong><br>
+                본 사이트는 Google AdSense 광고를 포함하고 있으며, Google은 광고 제공을 위해 쿠키를 사용할 수 있습니다.</p>
             </div>
-            <form action="https://formspree.io/f/xjgepnep" method="POST" class="support-form">
-                <div class="form-group">
-                    <label>이메일 주소</label>
-                    <input type="email" name="email" placeholder="email@example.com" required>
-                </div>
-                <div class="form-group">
-                    <label>문의 유형</label>
-                    <select name="type">
-                        <option value="general">일반 문의</option>
-                        <option value="bug">버그 제보</option>
-                        <option value="payment">결제/출금</option>
-                        <option value="event">이벤트 문의</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>메시지</label>
-                    <textarea name="message" rows="5" placeholder="문의하실 내용을 입력해주세요..." required></textarea>
-                </div>
-                <button type="submit" class="btn-accent full-width">보내기</button>
-            </form>
         </div>
     </div>
 

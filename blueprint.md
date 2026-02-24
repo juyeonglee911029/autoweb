@@ -1,22 +1,35 @@
-# Stake.com Style Casino Prototype Blueprint
+# 푸푸 테트리스 (Pupu Tetris) 블루프린트
 
-## Overview
-A high-fidelity frontend prototype mimicking the visual style and layout of Stake.com. This project focuses on the responsive UI, dark theme aesthetics, and interactive grid layouts using modern HTML, CSS, and Vanilla JavaScript.
+## 프로젝트 개요
+구글 애드센스 승인을 목표로 하는 고품질 멀티플레이어 테트리스 게임 사이트입니다. 깔끔한 디자인과 실시간 채팅, 대전 기능을 제공합니다.
 
-## Features
-1.  **Dark Theme & Branding:** Deep blue/grey background (`#0f212e`) with signature neon green accents (`#00e701`).
-2.  **Layout:**
-    *   **Sidebar:** Collapsible navigation (Casino, Sports, Sponsorships).
-    *   **Top Bar:** Wallet balance simulation, search, user profile.
-    *   **Main Content:** Hero banner carousel and responsive game grid.
-    *   **Chat Sidebar (New):** Right-side live chat simulation for user interaction.
-3.  **Components:**
-    *   **Tetris Game:** A fully playable Canvas-based Tetris game integrated as a "Stake Original".
-    *   **PvP Battle UI:** Mockup of matchmaking and competitive leaderboards.
-    *   **Support Form:** Integration with Formspree (`https://formspree.io/f/xjgepnep`) for user feedback.
-4.  **Tech Stack:** HTML5, Vanilla CSS (Variables, Grid/Flexbox), Vanilla JS, HTML5 Canvas.
+## 주요 기능 및 사양
+### 1. 테트리스 게임 엔진
+- **표준 규격:** 10x20 그리드 보드.
+- **고스트 피스:** 블록이 떨어질 예상 위치를 실시간으로 표시.
+- **하드 드롭:** 스페이스바를 누르면 즉시 바닥으로 낙하.
+- **홀드(보관) 기능:** 'Z' 키를 눌러 현재 블록을 보관하거나 교체.
+- **넥스트 큐:** 다음에 나올 블록을 미리 표시.
+- **레벨링 시스템:** 줄을 지울수록 속도가 단계적으로 상승.
 
-## Current Plan
-1.  **Structure (HTML):** Create the shell with Sidebar, Header, and Main content area.
-2.  **Styling (CSS):** Implement the specific color palette, typography, and responsive grid system.
-3.  **Interactivity (JS):** Add sidebar toggle, simple tab switching (Casino vs Sports), and sticky header behavior.
+### 2. 멀티플레이어 및 소셜
+- **실시간 채팅:** Socket.io를 이용한 유저 간 실시간 대화.
+- **공격 시스템:** 4줄(Tetris)을 한 번에 지우면 상대방에게 4줄의 방해 블록(Garbage)을 전송.
+
+### 3. 디자인 및 UI/UX
+- **테마:** 'Fredoka' 폰트를 사용한 부드럽고 친근한 파스텔톤 디자인.
+- **반응형:** 모바일과 데스크탑 환경 모두 최적화된 레이아웃.
+- **애드센스 최적화:** 광고 영역 확보 및 필수 페이지(개인정보처리방침) 포함.
+
+## 기술 스택
+- **Frontend:** HTML5 Canvas, CSS3 (Flexbox/Grid), Modern JavaScript.
+- **Backend:** Node.js, Express.
+- **Real-time:** Socket.io.
+
+## 구현 단계 (현재 완료)
+1. **서버 구축:** Express와 Socket.io를 연동한 기본 서버 설정.
+2. **프론트엔드 레이아웃:** 게임 보드, 스탯 창, 채팅창을 포함한 3컬럼 레이아웃 구현.
+3. **게임 로직 구현:** 블록 생성, 이동, 회전, 충돌 검사, 라인 클리어 로직 완성.
+4. **특수 기능 추가:** 고스트 피스, 홀드 기능, 4줄 공격 로직 구현.
+5. **디자인 고도화:** CSS 변수를 활용한 테마 적용 및 애니메이션 추가.
+6. **법적 요건:** 개인정보처리방침 모달 및 푸터 링크 추가.

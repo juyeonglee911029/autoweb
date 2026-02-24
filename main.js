@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const userProfile = document.getElementById('user-profile');
     const displayNameElem = document.getElementById('display-name');
     const userCoinsElem = document.getElementById('user-coins');
+    const jackpotAmountElem = document.getElementById('jackpot-amount');
     const betAmountInput = document.getElementById('bet-amount');
     const setBetBtn = document.getElementById('set-bet-btn');
     const depositBtn = document.getElementById('deposit-btn');

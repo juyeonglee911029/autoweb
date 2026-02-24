@@ -100,6 +100,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
+            // Listen for Jackpot updates
+            firestore.collection('system').doc('stats').onSnapshot(snapshot => {
+                if (snapshot.exists) {
+                    const jackpot = snapshot.data().serverTotal || 0;
+                    jackpotAmountElem.innerText = jackpot.toLocaleString();
+                }
+            });
+
             startOverlayText.innerText = "준비 되셨나요?";
             startBtn.disabled = false;
             startBtn.style.opacity = "1";

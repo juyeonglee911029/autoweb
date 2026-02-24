@@ -2,6 +2,19 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+var admin = require("firebase-admin");
+
+// Firebase Admin Initialization
+try {
+  var serviceAccount = require("./serviceAccountKey.json");
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    databaseURL: "https://pupu-tetris-default-rtdb.firebaseio.com"
+  });
+  console.log("Firebase Admin initialized successfully.");
+} catch (error) {
+  console.warn("Firebase Admin could not be initialized. Please ensure serviceAccountKey.json is present.");
+}
 
 const app = express();
 const server = http.createServer(app);

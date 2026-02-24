@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- DOM Elements ---
     const loginBtn = document.getElementById('login-btn');
+    const darkModeToggle = document.getElementById('dark-mode-toggle');
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('send-btn');
     const chatMessages = document.getElementById('chat-messages');
@@ -29,6 +30,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const startBtn = document.getElementById('start-btn');
     const restartBtn = document.getElementById('restart-btn');
 
+    // --- Dark Mode ---
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    
+    darkModeToggle.addEventListener('click', () => {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+    });
+
     // --- Firebase Configuration ---
     const firebaseConfig = {
         apiKey: "AIzaSyApH0U10lGxtcdtQ7fNSYJ7Iz4F5lRfpPA",
@@ -42,86 +54,95 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Initialize Firebase
-    if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
+    let auth, db, firestore;
+    try {
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        auth = firebase.auth();
+        db = firebase.database();
+        firestore = firebase.firestore();
+    } catch (e) {
+        console.error("Firebase initialization failed:", e);
     }
-    const auth = firebase.auth();
-    const db = firebase.database();
-    const firestore = firebase.firestore();
 
     // --- Auth & Profile ---
-    let myName = 'Guest';
+    let myName = 'Guest' + Math.floor(Math.random() * 1000);
     let currentUser = null;
-    let myCoins = 0;
+    let myCoins = 1000; // Default for guests
     let currentBet = 0;
-    const currentRoomId = 'global-room'; // For now, everyone joins the same room or we could make it dynamic
+    const currentRoomId = 'global-room';
 
-    loginBtn.addEventListener('click', () => {
-        if (currentUser) {
-            auth.signOut();
-        } else {
-            const provider = new firebase.auth.GoogleAuthProvider();
-            auth.signInWithPopup(provider).catch(error => {
-                console.error("Login failed:", error);
-                alert("로그인에 실패했습니다.");
-            });
-        }
-    });
+    displayNameElem.innerText = myName;
+    userCoinsElem.innerText = myCoins.toLocaleString();
 
-    auth.onAuthStateChanged(async (user) => {
-        if (user) {
-            currentUser = user;
-            myName = user.displayName || 'User';
-            loginBtn.innerText = '로그아웃';
-            displayNameElem.innerText = myName;
-            userProfile.style.display = 'block';
-            addSystemMessage(`${myName}님 환영합니다!`);
-            
-            // Sync with Firestore for Coins
-            const userRef = firestore.collection('users').doc(user.uid);
-            const doc = await userRef.get();
-            if (!doc.exists) {
-                await userRef.set({
-                    displayName: myName,
-                    coins: 1000, // Initial coins for new users
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                myCoins = 1000;
+    if (auth) {
+        loginBtn.addEventListener('click', () => {
+            if (currentUser) {
+                auth.signOut();
             } else {
-                myCoins = doc.data().coins || 0;
+                const provider = new firebase.auth.GoogleAuthProvider();
+                auth.signInWithPopup(provider).catch(error => {
+                    console.error("Login failed:", error);
+                    alert("로그인에 실패했습니다. 팝업 차단을 확인해주세요.");
+                });
             }
-            userCoinsElem.innerText = myCoins.toLocaleString();
+        });
 
-            // Listen for coin updates
-            userRef.onSnapshot(snapshot => {
-                if (snapshot.exists) {
-                    myCoins = snapshot.data().coins || 0;
-                    userCoinsElem.innerText = myCoins.toLocaleString();
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                currentUser = user;
+                myName = user.displayName || 'User';
+                loginBtn.innerText = '로그아웃';
+                displayNameElem.innerText = myName;
+                addSystemMessage(`${myName}님 환영합니다!`);
+                
+                // Sync with Firestore for Coins
+                const userRef = firestore.collection('users').doc(user.uid);
+                const doc = await userRef.get();
+                if (!doc.exists) {
+                    await userRef.set({
+                        displayName: myName,
+                        coins: 1000, 
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    myCoins = 1000;
+                } else {
+                    myCoins = doc.data().coins || 0;
                 }
-            });
+                userCoinsElem.innerText = myCoins.toLocaleString();
 
-            // Listen for Jackpot updates
-            firestore.collection('system').doc('stats').onSnapshot(snapshot => {
-                if (snapshot.exists) {
-                    const jackpot = snapshot.data().serverTotal || 0;
-                    jackpotAmountElem.innerText = jackpot.toLocaleString();
-                }
-            });
+                // Listen for coin updates
+                userRef.onSnapshot(snapshot => {
+                    if (snapshot.exists) {
+                        myCoins = snapshot.data().coins || 0;
+                        userCoinsElem.innerText = myCoins.toLocaleString();
+                    }
+                });
 
-            startOverlayText.innerText = "준비 되셨나요?";
-            startBtn.disabled = false;
-            startBtn.style.opacity = "1";
-        } else {
-            currentUser = null;
-            myName = 'Guest' + Math.floor(Math.random() * 1000);
-            loginBtn.innerText = '로그인';
-            userProfile.style.display = 'none';
-            addSystemMessage(`로그인이 필요합니다.`);
-            startOverlayText.innerText = "게임을 하시려면 로그인이 필요합니다.";
-            startBtn.disabled = true;
-            startBtn.style.opacity = "0.5";
-        }
-    });
+                // Listen for Jackpot updates
+                firestore.collection('system').doc('stats').onSnapshot(snapshot => {
+                    if (snapshot.exists) {
+                        const jackpot = snapshot.data().serverTotal || 0;
+                        jackpotAmountElem.innerText = jackpot.toLocaleString();
+                    }
+                });
+
+                startOverlayText.innerText = "준비 되셨나요?";
+                startBtn.disabled = false;
+                startBtn.style.opacity = "1";
+            } else {
+                currentUser = null;
+                myName = 'Guest' + Math.floor(Math.random() * 1000);
+                loginBtn.innerText = '로그인';
+                displayNameElem.innerText = myName;
+                addSystemMessage(`게스트 모드로 접속 중입니다.`);
+                startOverlayText.innerText = "준비 되셨나요?";
+                startBtn.disabled = false;
+                startBtn.style.opacity = "1";
+            }
+        });
+    }
 
     // Betting UI Events
     setBetBtn.addEventListener('click', () => {
@@ -131,21 +152,23 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         if (amount > myCoins) {
-            alert("보유 코인이 부족합니다.");
+            alert("보유 USDT가 부족합니다.");
             return;
         }
         currentBet = amount;
-        socket.emit('placeBet', { roomId: currentRoomId, amount: currentBet, userId: currentUser.uid });
-        addSystemMessage(`내기 금액이 ${currentBet}코인으로 설정되었습니다.`);
+        socket.emit('placeBet', { roomId: currentRoomId, amount: currentBet, userId: currentUser ? currentUser.uid : myName });
+        addSystemMessage(`내기 금액이 ${currentBet} USDT로 설정되었습니다.`);
     });
 
     depositBtn.addEventListener('click', () => {
-        // Placeholder for deposit logic
-        alert("입금 기능은 준비 중입니다. (테스트용으로 1000코인 지급)");
+        alert("입금 기능은 준비 중입니다. (테스트용으로 1000 USDT 지급)");
         if (currentUser) {
             firestore.collection('users').doc(currentUser.uid).update({
                 coins: firebase.firestore.FieldValue.increment(1000)
             });
+        } else {
+            myCoins += 1000;
+            userCoinsElem.innerText = myCoins.toLocaleString();
         }
     });
 
@@ -163,44 +186,58 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     socket.on('betPlaced', ({ userId, amount }) => {
-        if (userId !== currentUser?.uid) {
-            addSystemMessage(`상대방이 ${amount}코인을 걸었습니다.`);
+        const currentId = currentUser ? currentUser.uid : myName;
+        if (userId !== currentId) {
+            addSystemMessage(`상대방이 ${amount} USDT를 걸었습니다.`);
         }
     });
 
     socket.on('matchResult', async ({ winnerId, loserId, winnerPrize, serverFee }) => {
-        if (currentUser && currentUser.uid === winnerId) {
-            addSystemMessage(`승리! ${winnerPrize}코인을 획득했습니다! (수수료 ${serverFee} 차감)`);
-            await firestore.collection('users').doc(currentUser.uid).update({
-                coins: firebase.firestore.FieldValue.increment(winnerPrize)
-            });
-            // Update server total (optional)
-            firestore.collection('system').doc('stats').set({
-                serverTotal: firebase.firestore.FieldValue.increment(serverFee)
-            }, { merge: true });
-        } else if (currentUser && currentUser.uid === loserId) {
-            addSystemMessage(`패배... ${currentBet}코인을 잃었습니다.`);
-            await firestore.collection('users').doc(currentUser.uid).update({
-                coins: firebase.firestore.FieldValue.increment(-currentBet)
-            });
+        const currentId = currentUser ? currentUser.uid : myName;
+        if (currentId === winnerId) {
+            addSystemMessage(`승리! ${winnerPrize} USDT를 획득했습니다! (수수료 ${serverFee} 차감)`);
+            if (currentUser) {
+                await firestore.collection('users').doc(currentUser.uid).update({
+                    coins: firebase.firestore.FieldValue.increment(winnerPrize)
+                });
+            } else {
+                myCoins += winnerPrize;
+                userCoinsElem.innerText = myCoins.toLocaleString();
+            }
+        } else if (currentId === loserId) {
+            addSystemMessage(`패배... ${currentBet} USDT를 잃었습니다.`);
+            if (currentUser) {
+                await firestore.collection('users').doc(currentUser.uid).update({
+                    coins: firebase.firestore.FieldValue.increment(-currentBet)
+                });
+            } else {
+                myCoins -= currentBet;
+                userCoinsElem.innerText = myCoins.toLocaleString();
+            }
         }
     });
 
-    // --- Firebase RTDB Chat ---
-    const chatRef = db.ref('messages').limitToLast(50);
-    chatRef.on('child_added', (snapshot) => {
-        const msg = snapshot.val();
-        addMessage(msg.user, msg.text, msg.user === myName);
-    });
+    // --- Chat ---
+    if (db) {
+        const chatRef = db.ref('messages').limitToLast(50);
+        chatRef.on('child_added', (snapshot) => {
+            const msg = snapshot.val();
+            addMessage(msg.user, msg.text, msg.user === myName);
+        });
+    }
 
     function sendMessage() {
         const text = chatInput.value.trim();
         if (text) {
-            db.ref('messages').push({
-                user: myName,
-                text: text,
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            });
+            if (db) {
+                db.ref('messages').push({
+                    user: myName,
+                    text: text,
+                    timestamp: firebase.database.ServerValue.TIMESTAMP
+                });
+            } else {
+                socket.emit('chatMessage', { user: myName, text: text });
+            }
             chatInput.value = '';
         }
     }
@@ -210,10 +247,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') sendMessage();
     });
 
+    socket.on('chatMessage', (msg) => {
+        if (!db) addMessage(msg.user, msg.text, msg.user === myName);
+    });
+
     function addMessage(user, text, isMe) {
         const div = document.createElement('div');
-        div.className = 'message';
-        if (isMe) div.style.background = '#e6e6fa'; 
+        div.className = `message ${isMe ? 'me' : ''}`;
         div.innerHTML = `<span class="user">${user}:</span> ${text}`;
         chatMessages.appendChild(div);
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -232,6 +272,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const context = canvas.getContext('2d');
     const nextContext = nextCanvas.getContext('2d');
     const holdContext = holdCanvas.getContext('2d');
+
+    // Scale canvas to match internal resolution
+    function resizeCanvas() {
+        const ratio = 400 / 800;
+        const container = canvas.parentElement;
+        const height = container.clientHeight;
+        const width = height * ratio;
+        // canvas.width = 400; // Internal resolution
+        // canvas.height = 800;
+    }
+    
+    // resizeCanvas();
+    // window.addEventListener('resize', resizeCanvas);
 
     const BLOCK_SIZE = 40; 
     const NEXT_BLOCK_SIZE = 25;
@@ -293,13 +346,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Core Logic ---
 
     function draw() {
-        context.fillStyle = '#2d3436';
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        context.fillStyle = isDark ? '#000000' : '#2d3436';
         context.fillRect(0, 0, canvas.width / BLOCK_SIZE, canvas.height / BLOCK_SIZE);
         
-        nextContext.fillStyle = '#2d3436';
+        nextContext.fillStyle = isDark ? '#000000' : '#2d3436';
         nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
         
-        holdContext.fillStyle = '#2d3436';
+        holdContext.fillStyle = isDark ? '#000000' : '#2d3436';
         holdContext.fillRect(0, 0, holdCanvas.width, holdCanvas.height);
 
         drawMatrix(arena, {x: 0, y: 0}, context);
@@ -334,9 +388,9 @@ document.addEventListener('DOMContentLoaded', () => {
             row.forEach((value, x) => {
                 if (value !== 0) {
                     if (isGhost) {
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
                         ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
                         ctx.lineWidth = 0.05;
                         ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
                     } else {
@@ -516,9 +570,8 @@ document.addEventListener('DOMContentLoaded', () => {
         addSystemMessage("게임 오버!");
         
         // Notify server for betting
-        if (currentUser) {
-            socket.emit('gameOver', { roomId: currentRoomId, userId: currentUser.uid });
-        }
+        const currentId = currentUser ? currentUser.uid : myName;
+        socket.emit('gameOver', { roomId: currentRoomId, userId: currentId });
     }
 
     function resetGame() {
@@ -554,4 +607,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     startBtn.addEventListener('click', resetGame);
     restartBtn.addEventListener('click', resetGame);
+    
+    // Initial draw
+    draw();
 });

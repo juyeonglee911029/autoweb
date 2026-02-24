@@ -596,13 +596,36 @@ document.addEventListener('DOMContentLoaded', () => {
     // Quick Bet buttons
     document.querySelectorAll('.quick-bet-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            const amount = btn.getAttribute('data-amount');
-            if (amount === 'MAX') {
+            const amountAttr = btn.getAttribute('data-amount');
+            if (amountAttr === 'MAX') {
                 betAmountInput.value = myCoins;
             } else {
-                betAmountInput.value = parseInt(betAmountInput.value || 0) + parseInt(amount);
+                const addAmount = parseInt(amountAttr);
+                betAmountInput.value = (parseInt(betAmountInput.value) || 0) + addAmount;
             }
         });
+    });
+
+    setBetBtn.addEventListener('click', () => {
+        const amount = parseInt(betAmountInput.value);
+        if (isNaN(amount) || amount < 0) {
+            alert("올바른 베팅 금액을 입력해주세요.");
+            return;
+        }
+        if (amount > myCoins) {
+            alert("잔액이 부족합니다.");
+            return;
+        }
+        currentBet = amount;
+        addSystemMessage(`Bet set to ${currentBet} USDT.`);
+        
+        if (socket) {
+            socket.emit('placeBet', {
+                roomId: currentRoomId,
+                amount: currentBet,
+                userId: currentUser ? currentUser.uid : myName
+            });
+        }
     });
 
     // Initial draw

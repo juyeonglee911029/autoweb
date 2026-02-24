@@ -8,11 +8,21 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const displayNameElem = document.getElementById('display-name');
     const userCoinsElem = document.getElementById('user-coins');
+    const modalUserCoinsElem = document.getElementById('modal-user-coins');
     const jackpotAmountElem = document.getElementById('jackpot-amount');
     const betAmountInput = document.getElementById('bet-amount');
     const setBetBtn = document.getElementById('set-bet-btn');
+    
     const depositBtn = document.getElementById('deposit-btn');
     const withdrawBtn = document.getElementById('withdraw-btn');
+    const depositModal = document.getElementById('deposit-modal');
+    const withdrawModal = document.getElementById('withdraw-modal');
+    const closeButtons = document.querySelectorAll('.close-modal');
+    const copyAddressBtn = document.getElementById('copy-address-btn');
+    const depositAddressInput = document.getElementById('deposit-address');
+    const confirmWithdrawBtn = document.getElementById('confirm-withdraw-btn');
+    const withdrawAddressInput = document.getElementById('withdraw-address');
+    const withdrawAmountInput = document.getElementById('withdraw-amount');
 
     const canvas = document.getElementById('tetris-canvas');
     const nextCanvas = document.getElementById('next-canvas');
@@ -24,13 +34,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const finalScoreElement = document.getElementById('final-score');
     
     const startOverlay = document.getElementById('start-overlay');
-    const startOverlayText = document.querySelector('#start-overlay p');
     const gameOverlay = document.getElementById('game-overlay');
     const startBtn = document.getElementById('start-btn');
     const restartBtn = document.getElementById('restart-btn');
 
     // --- Dark Mode ---
-    const savedTheme = localStorage.getItem('theme') || 'light';
+    const savedTheme = localStorage.getItem('theme') || 'dark'; // Default to dark
     document.documentElement.setAttribute('data-theme', savedTheme);
     
     darkModeToggle.addEventListener('click', () => {
@@ -38,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const newTheme = currentTheme === 'light' ? 'dark' : 'light';
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
-        draw(); // Redraw canvas for colors
+        draw(); 
     });
 
     // --- Firebase Configuration ---
@@ -68,21 +77,34 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Auth & Profile ---
     let myName = 'Guest' + Math.floor(Math.random() * 1000);
     let currentUser = null;
-    let myCoins = 1000; 
+    let myCoins = 0; 
     let currentBet = 0;
     const currentRoomId = 'global-room';
 
+    function updateBalanceUI(coins) {
+        myCoins = coins;
+        const formatted = Number(coins).toLocaleString();
+        if (userCoinsElem) userCoinsElem.innerText = formatted;
+        if (modalUserCoinsElem) modalUserCoinsElem.innerText = formatted;
+    }
+
     displayNameElem.innerText = myName;
-    userCoinsElem.innerText = myCoins.toLocaleString();
+    updateBalanceUI(0);
 
     if (auth) {
         loginBtn.addEventListener('click', () => {
             if (currentUser) {
-                auth.signOut();
+                auth.signOut().then(() => {
+                    window.location.reload();
+                });
             } else {
                 const provider = new firebase.auth.GoogleAuthProvider();
-                auth.signInWithPopup(provider).catch(error => {
+                provider.setCustomParameters({ prompt: 'select_account' });
+                auth.signInWithPopup(provider).then(result => {
+                    console.log("Logged in:", result.user.displayName);
+                }).catch(error => {
                     console.error("Login failed:", error);
+                    alert("로그인에 실패했습니다: " + error.message);
                 });
             }
         });
@@ -91,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (user) {
                 currentUser = user;
                 myName = user.displayName || 'User';
-                loginBtn.innerText = '로그아웃';
+                loginBtn.innerHTML = '<span class="btn-icon">🚪</span><span class="btn-text">LOGOUT</span>';
                 displayNameElem.innerText = myName;
                 
                 const userRef = firestore.collection('users').doc(user.uid);
@@ -102,27 +124,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         coins: 1000, 
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
-                    myCoins = 1000;
+                    updateBalanceUI(1000);
                 } else {
-                    myCoins = doc.data().coins || 0;
+                    updateBalanceUI(doc.data().coins || 0);
                 }
-                userCoinsElem.innerText = myCoins.toLocaleString();
 
                 userRef.onSnapshot(snapshot => {
                     if (snapshot.exists) {
-                        myCoins = snapshot.data().coins || 0;
-                        userCoinsElem.innerText = myCoins.toLocaleString();
+                        updateBalanceUI(snapshot.data().coins || 0);
                     }
                 });
             } else {
                 currentUser = null;
                 myName = 'Guest' + Math.floor(Math.random() * 1000);
-                loginBtn.innerText = '로그인';
+                loginBtn.innerHTML = '<span class="btn-icon">👤</span><span class="btn-text">LOGIN</span>';
                 displayNameElem.innerText = myName;
-                myCoins = 1000;
-                userCoinsElem.innerText = myCoins.toLocaleString();
+                updateBalanceUI(0);
             }
-            addSystemMessage(`${myName}님 접속 중...`);
+            addSystemMessage(`${myName} joined the lobby.`);
         });
 
         // Jackpot listener
@@ -134,6 +153,72 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Modal Logic ---
+    depositBtn.addEventListener('click', () => {
+        if (!currentUser) { alert("로그인이 필요합니다."); return; }
+        depositModal.classList.add('active');
+    });
+
+    withdrawBtn.addEventListener('click', () => {
+        if (!currentUser) { alert("로그인이 필요합니다."); return; }
+        withdrawModal.classList.add('active');
+    });
+
+    closeButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            depositModal.classList.remove('active');
+            withdrawModal.classList.remove('active');
+        });
+    });
+
+    window.addEventListener('click', (e) => {
+        if (e.target === depositModal) depositModal.classList.remove('active');
+        if (e.target === withdrawModal) withdrawModal.classList.remove('active');
+    });
+
+    copyAddressBtn.addEventListener('click', () => {
+        depositAddressInput.select();
+        document.execCommand('copy');
+        copyAddressBtn.innerText = 'COPIED!';
+        setTimeout(() => { copyAddressBtn.innerText = 'COPY'; }, 2000);
+    });
+
+    confirmWithdrawBtn.addEventListener('click', async () => {
+        const address = withdrawAddressInput.value.trim();
+        const amount = parseFloat(withdrawAmountInput.value);
+
+        if (!address) { alert("출금 주소를 입력해주세요."); return; }
+        if (isNaN(amount) || amount <= 0) { alert("올바른 금액을 입력해주세요."); return; }
+        if (amount > myCoins) { alert("잔액이 부족합니다."); return; }
+
+        if (confirm(`${amount} USDT를 다음 주소로 출금하시겠습니까?\n${address}`)) {
+            try {
+                // Record withdrawal request in Firestore
+                await firestore.collection('withdrawals').add({
+                    uid: currentUser.uid,
+                    displayName: myName,
+                    address: address,
+                    amount: amount,
+                    status: 'pending',
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Deduct coins
+                await firestore.collection('users').doc(currentUser.uid).update({
+                    coins: firebase.firestore.FieldValue.increment(-amount)
+                });
+
+                alert("출금 신청이 완료되었습니다. (24시간 이내 처리)");
+                withdrawModal.classList.remove('active');
+                withdrawAddressInput.value = '';
+                withdrawAmountInput.value = '';
+            } catch (error) {
+                console.error("Withdrawal error:", error);
+                alert("출금 처리 중 오류가 발생했습니다.");
+            }
+        }
+    });
+
     // --- Socket.io ---
     let socket;
     try {
@@ -142,13 +227,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         socket.on('garbage', (lines) => {
             addGarbage(lines);
-            addSystemMessage(`공격받음! ${lines}줄 추가됨!`);
+            addSystemMessage(`Attack received! ${lines} lines added.`);
         });
 
         socket.on('matchResult', async ({ winnerId, loserId, winnerPrize }) => {
             const currentId = currentUser ? currentUser.uid : myName;
             if (currentId === winnerId) {
-                addSystemMessage(`승리! ${winnerPrize} USDT를 획득했습니다!`);
+                addSystemMessage(`VICTORY! Gained ${winnerPrize} USDT!`);
                 if (currentUser) {
                     await firestore.collection('users').doc(currentUser.uid).update({
                         coins: firebase.firestore.FieldValue.increment(winnerPrize)
@@ -194,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function addMessage(user, text, isMe) {
         const div = document.createElement('div');
         div.className = `message ${isMe ? 'me' : ''}`;
-        div.innerHTML = `<span class="user">${user}:</span> ${text}`;
+        div.innerHTML = `<span class="user" style="font-weight:bold; color:var(--accent-blue)">${user}:</span> ${text}`;
         chatMessages.appendChild(div);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -215,7 +300,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const BLOCK_SIZE = 40; 
     const PREVIEW_SIZE = 25;
 
-    // Fixed Scaling
     function initCanvas() {
         context.setTransform(1, 0, 0, 1, 0, 0);
         context.scale(BLOCK_SIZE, BLOCK_SIZE);
@@ -267,14 +351,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let canHold = true; 
 
     function draw() {
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        context.fillStyle = isDark ? '#1a1c1e' : '#2d3436';
+        context.fillStyle = '#000';
         context.fillRect(0, 0, canvas.width, canvas.height);
         
-        nextContext.fillStyle = isDark ? '#1a1c1e' : '#2d3436';
+        nextContext.fillStyle = '#000';
         nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
         
-        holdContext.fillStyle = isDark ? '#1a1c1e' : '#2d3436';
+        holdContext.fillStyle = '#000';
         holdContext.fillRect(0, 0, holdCanvas.width, holdCanvas.height);
 
         drawMatrix(arena, {x: 0, y: 0}, context);
@@ -310,7 +393,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         ctx.fillStyle = COLORS[value];
                         ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
                         ctx.lineWidth = 0.05;
-                        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+                        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
                         ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
                     }
                 }
@@ -473,7 +556,7 @@ document.addEventListener('DOMContentLoaded', () => {
         isGameOver = true;
         finalScoreElement.innerText = player.score;
         gameOverlay.classList.add('active');
-        addSystemMessage("게임 오버!");
+        addSystemMessage("Game Over!");
     }
 
     function resetGame() {
@@ -510,6 +593,18 @@ document.addEventListener('DOMContentLoaded', () => {
     startBtn.addEventListener('click', resetGame);
     restartBtn.addEventListener('click', resetGame);
     
+    // Quick Bet buttons
+    document.querySelectorAll('.quick-bet-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const amount = btn.getAttribute('data-amount');
+            if (amount === 'MAX') {
+                betAmountInput.value = myCoins;
+            } else {
+                betAmountInput.value = parseInt(betAmountInput.value || 0) + parseInt(amount);
+            }
+        });
+    });
+
     // Initial draw
     draw();
 });

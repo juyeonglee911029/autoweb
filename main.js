@@ -1,32 +1,96 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- Socket.io Setup ---
-    const socket = io();
+    // --- Firebase Configuration ---
+    // User: Please replace these with your actual Firebase project configuration from the Firebase Console
+    const firebaseConfig = {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "pupu-tetris-default-rtdb.firebaseapp.com",
+        databaseURL: "https://pupu-tetris-default-rtdb.firebaseio.com",
+        projectId: "pupu-tetris-default-rtdb",
+        storageBucket: "pupu-tetris-default-rtdb.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+    }
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    // --- Auth & Profile ---
     let myName = 'Guest';
+    let currentUser = null;
 
-    const connectionStatus = document.getElementById('connection-status');
-    const chatInput = document.getElementById('chat-input');
-    const sendBtn = document.getElementById('send-btn');
-    const chatMessages = document.getElementById('chat-messages');
+    const loginBtn = document.getElementById('login-btn');
 
-    socket.on('init', (data) => {
-        myName = data.name;
-        addSystemMessage(`채팅방에 ${myName}님으로 접속되었습니다.`);
+    loginBtn.addEventListener('click', () => {
+        if (currentUser) {
+            auth.signOut();
+        } else {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(error => {
+                console.error("Login failed:", error);
+                alert("로그인에 실패했습니다. Firebase Console에서 Google 로그인이 활성화되어 있는지 확인하세요.");
+            });
+        }
     });
 
-    socket.on('chatMessage', (msg) => {
-        addMessage(msg.user, msg.text, msg.user === myName);
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            currentUser = user;
+            myName = user.displayName || 'User';
+            loginBtn.innerText = '로그아웃';
+            addSystemMessage(`${myName}님으로 로그인되었습니다.`);
+        } else {
+            currentUser = null;
+            myName = 'Guest' + Math.floor(Math.random() * 1000);
+            loginBtn.innerText = '로그인';
+            addSystemMessage(`GUEST 모드 (${myName})`);
+        }
     });
+
+    // --- Socket.io (for Multiplayer attacks) ---
+    const socket = io();
 
     socket.on('garbage', (lines) => {
         addGarbage(lines);
         addSystemMessage(`공격받음! ${lines}줄 추가됨!`);
     });
 
-    // Chat Functions
+    // --- Firebase RTDB Chat ---
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    const chatMessages = document.getElementById('chat-messages');
+
+    // Listen for new messages
+    const chatRef = db.ref('messages').limitToLast(50);
+    chatRef.on('child_added', (snapshot) => {
+        const msg = snapshot.val();
+        addMessage(msg.user, msg.text, msg.user === myName);
+    });
+
+    function sendMessage() {
+        const text = chatInput.value.trim();
+        if (text) {
+            db.ref('messages').push({
+                user: myName,
+                text: text,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+            chatInput.value = '';
+        }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') sendMessage();
+    });
+
     function addMessage(user, text, isMe) {
         const div = document.createElement('div');
         div.className = 'message';
-        if (isMe) div.style.background = '#e6e6fa'; // Light purple for me
+        if (isMe) div.style.background = '#e6e6fa'; 
         div.innerHTML = `<span class="user">${user}:</span> ${text}`;
         chatMessages.appendChild(div);
         chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -39,19 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
         chatMessages.appendChild(div);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
-
-    function sendMessage() {
-        const text = chatInput.value.trim();
-        if (text) {
-            socket.emit('chatMessage', { user: myName, text });
-            chatInput.value = '';
-        }
-    }
-
-    sendBtn.addEventListener('click', sendMessage);
-    chatInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessage();
-    });
 
 
     // --- Tetris Game Logic ---
@@ -72,8 +123,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const startBtn = document.getElementById('start-btn');
     const restartBtn = document.getElementById('restart-btn');
 
-    // Scale
-    const BLOCK_SIZE = 30;
+    // Scale - Enlarge (400x800 canvas)
+    const BLOCK_SIZE = 40; 
     const NEXT_BLOCK_SIZE = 25;
     context.scale(BLOCK_SIZE, BLOCK_SIZE);
     nextContext.scale(NEXT_BLOCK_SIZE, NEXT_BLOCK_SIZE);
@@ -129,14 +180,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // Advanced Features
     let nextQueue = [];
     let holdPiece = null;
-    let canHold = true; // Can only hold once per turn
+    let canHold = true; 
 
     // --- Core Logic ---
 
     function draw() {
-        // Clear Backgrounds
         context.fillStyle = '#2d3436';
-        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.fillRect(0, 0, canvas.width / BLOCK_SIZE, canvas.height / BLOCK_SIZE);
         
         nextContext.fillStyle = '#2d3436';
         nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
@@ -146,28 +196,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         drawMatrix(arena, {x: 0, y: 0}, context);
         
-        // Ghost Piece
         if (!isPaused && !isGameOver) {
             const ghostPos = { ...player.pos };
             while (!collide(arena, { pos: ghostPos, matrix: player.matrix })) {
                 ghostPos.y++;
             }
-            ghostPos.y--; // Back up one step
+            ghostPos.y--; 
             
-            drawMatrix(player.matrix, ghostPos, context, true); // true for ghost
+            drawMatrix(player.matrix, ghostPos, context, true); 
             drawMatrix(player.matrix, player.pos, context);
         }
 
-        // Draw Next
         if (nextQueue.length > 0) {
             const nextM = nextQueue[0];
-            // Center in 4x4 grid (approx)
             const offsetX = (4 - nextM[0].length) / 2;
             const offsetY = (4 - nextM.length) / 2;
             drawMatrix(nextM, {x: offsetX, y: offsetY}, nextContext);
         }
 
-        // Draw Hold
         if (holdPiece) {
             const offsetX = (4 - holdPiece[0].length) / 2;
             const offsetY = (4 - holdPiece.length) / 2;
@@ -186,16 +232,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         ctx.lineWidth = 0.05;
                         ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
                     } else {
-                        // Main Block
                         ctx.fillStyle = COLORS[value];
                         ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
                         
-                        // Bevel effect (simple)
                         ctx.lineWidth = 0.05;
                         ctx.strokeStyle = 'rgba(0,0,0,0.3)';
                         ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
                         
-                        // Shine
                         ctx.fillStyle = 'rgba(255,255,255,0.3)';
                         ctx.fillRect(x + offset.x + 0.1, y + offset.y + 0.1, 0.2, 0.2);
                     }
@@ -236,7 +279,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
             
-            // Row is full
             const row = arena.splice(y, 1)[0].fill(0);
             arena.unshift(row);
             ++y;
@@ -244,23 +286,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (rowCount > 0) {
-            // Scoring
-            // 1: 100, 2: 300, 3: 500, 4: 800 (Tetris)
             const lineScores = [0, 100, 300, 500, 800];
             player.score += lineScores[rowCount] * player.level;
             player.lines += rowCount;
-            
-            // Level Up every 10 lines
             player.level = Math.floor(player.lines / 10) + 1;
-            
-            // Speed Up
-            // Formula: (0.8 - ((Level - 1) * 0.007)) ^ (Level - 1) * 1000 ... simplified:
-            // Just subtract 50ms per level, min 100ms
             dropInterval = Math.max(100, 1000 - (player.level - 1) * 100);
 
-            // Multiplayer Attack
             if (rowCount === 4) {
-                socket.emit('attack', 4); // Send 4 lines of garbage
+                socket.emit('attack', 4); 
                 addSystemMessage("테트리스! 공격을 보냈습니다!");
             }
 
@@ -269,18 +302,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function playerReset() {
-        if (nextQueue.length === 0) {
-            // Init queue
-            fillQueue();
-        }
+        if (nextQueue.length === 0) fillQueue();
         
         player.matrix = nextQueue.shift();
-        fillQueue(); // Keep queue full
+        fillQueue(); 
         
         player.pos.y = 0;
         player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
         
-        canHold = true; // Reset hold capability for new turn
+        canHold = true; 
 
         if (collide(arena, player)) {
             gameOver();
@@ -340,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
         while (!collide(arena, player)) {
             player.pos.y++;
         }
-        player.pos.y--; // Back up into valid spot
+        player.pos.y--; 
         merge(arena, player);
         arenaSweep();
         playerReset();
@@ -352,31 +382,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (holdPiece === null) {
             holdPiece = player.matrix;
-            playerReset(); // Get next piece
+            playerReset(); 
         } else {
             const temp = player.matrix;
             player.matrix = holdPiece;
             holdPiece = temp;
-            
-            // Reset position
             player.pos.y = 0;
             player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
         }
-        
         canHold = false;
     }
 
-    // Multiplayer: Add Garbage
     function addGarbage(lines) {
-        // Remove top 'lines'
         for (let i = 0; i < lines; i++) {
             arena.shift(); 
         }
-        // Add bottom 'garbage' lines (random hole)
         for (let i = 0; i < lines; i++) {
-            const row = new Array(10).fill(8); // 8 = gray/garbage color? Using 1 for now or special
-            // Let's use 1 (Red/T-color) or any existing color for garbage, or add a gray to palette
-            // Using 7 (Blue) for now
+            const row = new Array(10).fill(8); 
             const hole = Math.floor(Math.random() * 10);
             row[hole] = 0;
             arena.push(row);
@@ -433,52 +455,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Controls
     document.addEventListener('keydown', event => {
-        // Chat focus check
         if (document.activeElement === chatInput) return;
-
         if (isPaused && !startOverlay.classList.contains('active')) return;
+        if ([32, 37, 38, 39, 40].includes(event.keyCode)) event.preventDefault();
 
-        // Prevent scrolling for game keys
-        if ([32, 37, 38, 39, 40].includes(event.keyCode)) {
-            event.preventDefault();
-        }
-
-        if (event.keyCode === 37) { // Left
-            playerMove(-1);
-        } else if (event.keyCode === 39) { // Right
-            playerMove(1);
-        } else if (event.keyCode === 40) { // Down
-            playerDrop();
-        } else if (event.keyCode === 38) { // Up (Rotate)
-            playerRotate(1);
-        } else if (event.keyCode === 32) { // Space (Hard Drop)
-            hardDrop();
-        } else if (event.key.toLowerCase() === 'z') { // Z (Hold)
-            hold();
-        }
+        if (event.keyCode === 37) playerMove(-1);
+        else if (event.keyCode === 39) playerMove(1);
+        else if (event.keyCode === 40) playerDrop();
+        else if (event.keyCode === 38) playerRotate(1);
+        else if (event.keyCode === 32) hardDrop();
+        else if (event.key.toLowerCase() === 'z') hold();
     });
 
-    // Buttons
     startBtn.addEventListener('click', resetGame);
     restartBtn.addEventListener('click', resetGame);
-
-    // Modal
-    const modal = document.getElementById('modal');
-    const privacyLink = document.getElementById('privacy-link');
-    const closeBtn = document.querySelector('.close-modal');
-
-    privacyLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        modal.style.display = 'block';
-    });
-
-    closeBtn.addEventListener('click', () => {
-        modal.style.display = 'none';
-    });
-
-    window.onclick = (event) => {
-        if (event.target == modal) {
-            modal.style.display = 'none';
-        }
-    };
 });

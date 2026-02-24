@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const sendBtn = document.getElementById('send-btn');
     const chatMessages = document.getElementById('chat-messages');
     
-    const userProfile = document.getElementById('user-profile');
     const displayNameElem = document.getElementById('display-name');
     const userCoinsElem = document.getElementById('user-coins');
     const jackpotAmountElem = document.getElementById('jackpot-amount');
@@ -39,6 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const newTheme = currentTheme === 'light' ? 'dark' : 'light';
         document.documentElement.setAttribute('data-theme', newTheme);
         localStorage.setItem('theme', newTheme);
+        draw(); // Redraw canvas for colors
     });
 
     // --- Firebase Configuration ---
@@ -54,13 +54,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Initialize Firebase
-    let auth, db, firestore;
+    let auth, firestore;
     try {
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
         auth = firebase.auth();
-        db = firebase.database();
         firestore = firebase.firestore();
     } catch (e) {
         console.error("Firebase initialization failed:", e);
@@ -69,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Auth & Profile ---
     let myName = 'Guest' + Math.floor(Math.random() * 1000);
     let currentUser = null;
-    let myCoins = 1000; // Default for guests
+    let myCoins = 1000; 
     let currentBet = 0;
     const currentRoomId = 'global-room';
 
@@ -84,7 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const provider = new firebase.auth.GoogleAuthProvider();
                 auth.signInWithPopup(provider).catch(error => {
                     console.error("Login failed:", error);
-                    alert("로그인에 실패했습니다. 팝업 차단을 확인해주세요.");
                 });
             }
         });
@@ -95,9 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 myName = user.displayName || 'User';
                 loginBtn.innerText = '로그아웃';
                 displayNameElem.innerText = myName;
-                addSystemMessage(`${myName}님 환영합니다!`);
                 
-                // Sync with Firestore for Coins
                 const userRef = firestore.collection('users').doc(user.uid);
                 const doc = await userRef.get();
                 if (!doc.exists) {
@@ -112,132 +108,80 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
                 userCoinsElem.innerText = myCoins.toLocaleString();
 
-                // Listen for coin updates
                 userRef.onSnapshot(snapshot => {
                     if (snapshot.exists) {
                         myCoins = snapshot.data().coins || 0;
                         userCoinsElem.innerText = myCoins.toLocaleString();
                     }
                 });
-
-                // Listen for Jackpot updates
-                firestore.collection('system').doc('stats').onSnapshot(snapshot => {
-                    if (snapshot.exists) {
-                        const jackpot = snapshot.data().serverTotal || 0;
-                        jackpotAmountElem.innerText = jackpot.toLocaleString();
-                    }
-                });
-
-                startOverlayText.innerText = "준비 되셨나요?";
-                startBtn.disabled = false;
-                startBtn.style.opacity = "1";
             } else {
                 currentUser = null;
                 myName = 'Guest' + Math.floor(Math.random() * 1000);
                 loginBtn.innerText = '로그인';
                 displayNameElem.innerText = myName;
-                addSystemMessage(`게스트 모드로 접속 중입니다.`);
-                startOverlayText.innerText = "준비 되셨나요?";
-                startBtn.disabled = false;
-                startBtn.style.opacity = "1";
+                myCoins = 1000;
+                userCoinsElem.innerText = myCoins.toLocaleString();
+            }
+            addSystemMessage(`${myName}님 접속 중...`);
+        });
+
+        // Jackpot listener
+        firestore.collection('system').doc('stats').onSnapshot(snapshot => {
+            if (snapshot.exists) {
+                const jackpot = snapshot.data().serverTotal || 0;
+                jackpotAmountElem.innerText = jackpot.toLocaleString();
             }
         });
     }
 
-    // Betting UI Events
-    setBetBtn.addEventListener('click', () => {
-        const amount = parseInt(betAmountInput.value);
-        if (isNaN(amount) || amount < 0) {
-            alert("올바른 금액을 입력하세요.");
-            return;
-        }
-        if (amount > myCoins) {
-            alert("보유 USDT가 부족합니다.");
-            return;
-        }
-        currentBet = amount;
-        socket.emit('placeBet', { roomId: currentRoomId, amount: currentBet, userId: currentUser ? currentUser.uid : myName });
-        addSystemMessage(`내기 금액이 ${currentBet} USDT로 설정되었습니다.`);
-    });
-
-    depositBtn.addEventListener('click', () => {
-        alert("입금 기능은 준비 중입니다. (테스트용으로 1000 USDT 지급)");
-        if (currentUser) {
-            firestore.collection('users').doc(currentUser.uid).update({
-                coins: firebase.firestore.FieldValue.increment(1000)
-            });
-        } else {
-            myCoins += 1000;
-            userCoinsElem.innerText = myCoins.toLocaleString();
-        }
-    });
-
-    withdrawBtn.addEventListener('click', () => {
-        alert("출금 기능은 준비 중입니다.");
-    });
-
     // --- Socket.io ---
-    const socket = io();
-    socket.emit('joinRoom', currentRoomId);
+    let socket;
+    try {
+        socket = io();
+        socket.emit('joinRoom', currentRoomId);
 
-    socket.on('garbage', (lines) => {
-        addGarbage(lines);
-        addSystemMessage(`공격받음! ${lines}줄 추가됨!`);
-    });
-
-    socket.on('betPlaced', ({ userId, amount }) => {
-        const currentId = currentUser ? currentUser.uid : myName;
-        if (userId !== currentId) {
-            addSystemMessage(`상대방이 ${amount} USDT를 걸었습니다.`);
-        }
-    });
-
-    socket.on('matchResult', async ({ winnerId, loserId, winnerPrize, serverFee }) => {
-        const currentId = currentUser ? currentUser.uid : myName;
-        if (currentId === winnerId) {
-            addSystemMessage(`승리! ${winnerPrize} USDT를 획득했습니다! (수수료 ${serverFee} 차감)`);
-            if (currentUser) {
-                await firestore.collection('users').doc(currentUser.uid).update({
-                    coins: firebase.firestore.FieldValue.increment(winnerPrize)
-                });
-            } else {
-                myCoins += winnerPrize;
-                userCoinsElem.innerText = myCoins.toLocaleString();
-            }
-        } else if (currentId === loserId) {
-            addSystemMessage(`패배... ${currentBet} USDT를 잃었습니다.`);
-            if (currentUser) {
-                await firestore.collection('users').doc(currentUser.uid).update({
-                    coins: firebase.firestore.FieldValue.increment(-currentBet)
-                });
-            } else {
-                myCoins -= currentBet;
-                userCoinsElem.innerText = myCoins.toLocaleString();
-            }
-        }
-    });
-
-    // --- Chat ---
-    if (db) {
-        const chatRef = db.ref('messages').limitToLast(50);
-        chatRef.on('child_added', (snapshot) => {
-            const msg = snapshot.val();
-            addMessage(msg.user, msg.text, msg.user === myName);
+        socket.on('garbage', (lines) => {
+            addGarbage(lines);
+            addSystemMessage(`공격받음! ${lines}줄 추가됨!`);
         });
+
+        socket.on('matchResult', async ({ winnerId, loserId, winnerPrize }) => {
+            const currentId = currentUser ? currentUser.uid : myName;
+            if (currentId === winnerId) {
+                addSystemMessage(`승리! ${winnerPrize} USDT를 획득했습니다!`);
+                if (currentUser) {
+                    await firestore.collection('users').doc(currentUser.uid).update({
+                        coins: firebase.firestore.FieldValue.increment(winnerPrize)
+                    });
+                }
+            }
+        });
+    } catch(e) {
+        console.warn("Socket.io not available");
+    }
+
+    // --- Chat (Firestore) ---
+    if (firestore) {
+        firestore.collection('chat')
+            .orderBy('timestamp', 'desc')
+            .limit(50)
+            .onSnapshot(snapshot => {
+                chatMessages.innerHTML = '';
+                snapshot.docs.reverse().forEach(doc => {
+                    const msg = doc.data();
+                    addMessage(msg.user, msg.text, msg.user === myName);
+                });
+            });
     }
 
     function sendMessage() {
         const text = chatInput.value.trim();
-        if (text) {
-            if (db) {
-                db.ref('messages').push({
-                    user: myName,
-                    text: text,
-                    timestamp: firebase.database.ServerValue.TIMESTAMP
-                });
-            } else {
-                socket.emit('chatMessage', { user: myName, text: text });
-            }
+        if (text && firestore) {
+            firestore.collection('chat').add({
+                user: myName,
+                text: text,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
             chatInput.value = '';
         }
     }
@@ -245,10 +189,6 @@ document.addEventListener('DOMContentLoaded', () => {
     sendBtn.addEventListener('click', sendMessage);
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
-    });
-
-    socket.on('chatMessage', (msg) => {
-        if (!db) addMessage(msg.user, msg.text, msg.user === myName);
     });
 
     function addMessage(user, text, isMe) {
@@ -267,43 +207,29 @@ document.addEventListener('DOMContentLoaded', () => {
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-
     // --- Tetris Game Logic ---
     const context = canvas.getContext('2d');
     const nextContext = nextCanvas.getContext('2d');
     const holdContext = holdCanvas.getContext('2d');
 
-    // Scale canvas to match internal resolution
-    function resizeCanvas() {
-        const ratio = 400 / 800;
-        const container = canvas.parentElement;
-        const height = container.clientHeight;
-        const width = height * ratio;
-        // canvas.width = 400; // Internal resolution
-        // canvas.height = 800;
-    }
-    
-    // resizeCanvas();
-    // window.addEventListener('resize', resizeCanvas);
-
     const BLOCK_SIZE = 40; 
-    const NEXT_BLOCK_SIZE = 25;
-    context.scale(BLOCK_SIZE, BLOCK_SIZE);
-    nextContext.scale(NEXT_BLOCK_SIZE, NEXT_BLOCK_SIZE);
-    holdContext.scale(NEXT_BLOCK_SIZE, NEXT_BLOCK_SIZE);
+    const PREVIEW_SIZE = 25;
 
-    // Pieces
+    // Fixed Scaling
+    function initCanvas() {
+        context.setTransform(1, 0, 0, 1, 0, 0);
+        context.scale(BLOCK_SIZE, BLOCK_SIZE);
+        nextContext.setTransform(1, 0, 0, 1, 0, 0);
+        nextContext.scale(PREVIEW_SIZE, PREVIEW_SIZE);
+        holdContext.setTransform(1, 0, 0, 1, 0, 0);
+        holdContext.scale(PREVIEW_SIZE, PREVIEW_SIZE);
+    }
+    initCanvas();
+
     const SHAPES = 'ILJOTSZ';
     const COLORS = [
         null,
-        '#FF0D72', // T
-        '#0DC2FF', // O
-        '#0DFF72', // L
-        '#F538FF', // J
-        '#FF8E0D', // I
-        '#FFE138', // S
-        '#3877FF', // Z
-        '#636e72', // Garbage (Gray)
+        '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF', '#636e72'
     ];
 
     function createPiece(type) {
@@ -322,7 +248,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return matrix;
     }
 
-    // Game State
     let arena = createMatrix(10, 20);
     const player = {
         pos: {x: 0, y: 0},
@@ -337,49 +262,40 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastTime = 0;
     let isGameOver = false;
     let isPaused = true;
-    let requestID = null;
-
     let nextQueue = [];
     let holdPiece = null;
     let canHold = true; 
 
-    // --- Core Logic ---
-
     function draw() {
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        context.fillStyle = isDark ? '#000000' : '#2d3436';
-        context.fillRect(0, 0, canvas.width / BLOCK_SIZE, canvas.height / BLOCK_SIZE);
+        context.fillStyle = isDark ? '#1a1c1e' : '#2d3436';
+        context.fillRect(0, 0, canvas.width, canvas.height);
         
-        nextContext.fillStyle = isDark ? '#000000' : '#2d3436';
+        nextContext.fillStyle = isDark ? '#1a1c1e' : '#2d3436';
         nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
         
-        holdContext.fillStyle = isDark ? '#000000' : '#2d3436';
+        holdContext.fillStyle = isDark ? '#1a1c1e' : '#2d3436';
         holdContext.fillRect(0, 0, holdCanvas.width, holdCanvas.height);
 
         drawMatrix(arena, {x: 0, y: 0}, context);
         
-        if (!isPaused && !isGameOver) {
+        if (!isPaused && !isGameOver && player.matrix) {
             const ghostPos = { ...player.pos };
             while (!collide(arena, { pos: ghostPos, matrix: player.matrix })) {
                 ghostPos.y++;
             }
             ghostPos.y--; 
-            
             drawMatrix(player.matrix, ghostPos, context, true); 
             drawMatrix(player.matrix, player.pos, context);
         }
 
         if (nextQueue.length > 0) {
             const nextM = nextQueue[0];
-            const offsetX = (4 - nextM[0].length) / 2;
-            const offsetY = (4 - nextM.length) / 2;
-            drawMatrix(nextM, {x: offsetX, y: offsetY}, nextContext);
+            drawMatrix(nextM, {x: 1, y: 1}, nextContext);
         }
 
         if (holdPiece) {
-            const offsetX = (4 - holdPiece[0].length) / 2;
-            const offsetY = (4 - holdPiece.length) / 2;
-            drawMatrix(holdPiece, {x: offsetX, y: offsetY}, holdContext);
+            drawMatrix(holdPiece, {x: 1, y: 1}, holdContext);
         }
     }
 
@@ -388,28 +304,15 @@ document.addEventListener('DOMContentLoaded', () => {
             row.forEach((value, x) => {
                 if (value !== 0) {
                     if (isGhost) {
-                        ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+                        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
                         ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
-                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-                        ctx.lineWidth = 0.05;
-                        ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
                     } else {
                         ctx.fillStyle = COLORS[value];
                         ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
                         ctx.lineWidth = 0.05;
-                        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+                        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
                         ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
                     }
-                }
-            });
-        });
-    }
-
-    function merge(arena, player) {
-        player.matrix.forEach((row, y) => {
-            row.forEach((value, x) => {
-                if (value !== 0) {
-                    arena[y + player.pos.y][x + player.pos.x] = value;
                 }
             });
         });
@@ -426,6 +329,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         return false;
+    }
+
+    function merge(arena, player) {
+        player.matrix.forEach((row, y) => {
+            row.forEach((value, x) => {
+                if (value !== 0) {
+                    arena[y + player.pos.y][x + player.pos.x] = value;
+                }
+            });
+        });
     }
 
     function arenaSweep() {
@@ -446,11 +359,6 @@ document.addEventListener('DOMContentLoaded', () => {
             player.lines += rowCount;
             player.level = Math.floor(player.lines / 10) + 1;
             dropInterval = Math.max(100, 1000 - (player.level - 1) * 100);
-
-            if (rowCount === 4) {
-                socket.emit('attack', { roomId: currentRoomId, lines: 4 }); 
-                addSystemMessage("테트리스! 공격을 보냈습니다!");
-            }
             updateStats();
         }
     }
@@ -537,11 +445,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addGarbage(lines) {
-        for (let i = 0; i < lines; i++) arena.shift(); 
         for (let i = 0; i < lines; i++) {
-            const row = new Array(10).fill(8); 
-            const hole = Math.floor(Math.random() * 10);
-            row[hole] = 0;
+            arena.shift();
+            const row = new Array(10).fill(8);
+            row[Math.floor(Math.random() * 10)] = 0;
             arena.push(row);
         }
     }
@@ -553,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dropCounter += deltaTime;
         if (dropCounter > dropInterval) playerDrop();
         draw();
-        requestID = requestAnimationFrame(update);
+        requestAnimationFrame(update);
     }
 
     function updateStats() {
@@ -564,14 +471,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function gameOver() {
         isGameOver = true;
-        cancelAnimationFrame(requestID);
         finalScoreElement.innerText = player.score;
         gameOverlay.classList.add('active');
         addSystemMessage("게임 오버!");
-        
-        // Notify server for betting
-        const currentId = currentUser ? currentUser.uid : myName;
-        socket.emit('gameOver', { roomId: currentRoomId, userId: currentId });
     }
 
     function resetGame() {
@@ -588,13 +490,13 @@ document.addEventListener('DOMContentLoaded', () => {
         isPaused = false;
         startOverlay.classList.remove('active');
         gameOverlay.classList.remove('active');
+        lastTime = performance.now();
         update();
     }
 
-    // Controls
     document.addEventListener('keydown', event => {
         if (document.activeElement === chatInput) return;
-        if (isPaused && !startOverlay.classList.contains('active')) return;
+        if (isPaused || isGameOver) return;
         if ([32, 37, 38, 39, 40].includes(event.keyCode)) event.preventDefault();
 
         if (event.keyCode === 37) playerMove(-1);

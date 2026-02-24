@@ -4,13 +4,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatInput = document.getElementById('chat-input');
     const sendBtn = document.getElementById('send-btn');
     const chatMessages = document.getElementById('chat-messages');
+    
+    const userProfile = document.getElementById('user-profile');
+    const displayNameElem = document.getElementById('display-name');
+    const userCoinsElem = document.getElementById('user-coins');
+    const betAmountInput = document.getElementById('bet-amount');
+    const setBetBtn = document.getElementById('set-bet-btn');
+    const depositBtn = document.getElementById('deposit-btn');
+    const withdrawBtn = document.getElementById('withdraw-btn');
+
     const canvas = document.getElementById('tetris-canvas');
     const nextCanvas = document.getElementById('next-canvas');
     const holdCanvas = document.getElementById('hold-canvas');
+    
     const scoreElement = document.getElementById('score');
     const levelElement = document.getElementById('level');
     const linesElement = document.getElementById('lines');
     const finalScoreElement = document.getElementById('final-score');
+    
     const startOverlay = document.getElementById('start-overlay');
     const startOverlayText = document.querySelector('#start-overlay p');
     const gameOverlay = document.getElementById('game-overlay');
@@ -35,10 +46,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const auth = firebase.auth();
     const db = firebase.database();
+    const firestore = firebase.firestore();
 
     // --- Auth & Profile ---
     let myName = 'Guest';
     let currentUser = null;
+    let myCoins = 0;
+    let currentBet = 0;
+    const currentRoomId = 'global-room'; // For now, everyone joins the same room or we could make it dynamic
 
     loginBtn.addEventListener('click', () => {
         if (currentUser) {
@@ -47,17 +62,43 @@ document.addEventListener('DOMContentLoaded', () => {
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider).catch(error => {
                 console.error("Login failed:", error);
-                alert("로그인에 실패했습니다. Firebase Console에서 Google 로그인이 활성화되어 있는지 확인하세요.");
+                alert("로그인에 실패했습니다.");
             });
         }
     });
 
-    auth.onAuthStateChanged((user) => {
+    auth.onAuthStateChanged(async (user) => {
         if (user) {
             currentUser = user;
             myName = user.displayName || 'User';
             loginBtn.innerText = '로그아웃';
-            addSystemMessage(`${myName}님으로 로그인되었습니다.`);
+            displayNameElem.innerText = myName;
+            userProfile.style.display = 'block';
+            addSystemMessage(`${myName}님 환영합니다!`);
+            
+            // Sync with Firestore for Coins
+            const userRef = firestore.collection('users').doc(user.uid);
+            const doc = await userRef.get();
+            if (!doc.exists) {
+                await userRef.set({
+                    displayName: myName,
+                    coins: 1000, // Initial coins for new users
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                myCoins = 1000;
+            } else {
+                myCoins = doc.data().coins || 0;
+            }
+            userCoinsElem.innerText = myCoins.toLocaleString();
+
+            // Listen for coin updates
+            userRef.onSnapshot(snapshot => {
+                if (snapshot.exists) {
+                    myCoins = snapshot.data().coins || 0;
+                    userCoinsElem.innerText = myCoins.toLocaleString();
+                }
+            });
+
             startOverlayText.innerText = "준비 되셨나요?";
             startBtn.disabled = false;
             startBtn.style.opacity = "1";
@@ -65,6 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentUser = null;
             myName = 'Guest' + Math.floor(Math.random() * 1000);
             loginBtn.innerText = '로그인';
+            userProfile.style.display = 'none';
             addSystemMessage(`로그인이 필요합니다.`);
             startOverlayText.innerText = "게임을 하시려면 로그인이 필요합니다.";
             startBtn.disabled = true;
@@ -72,16 +114,70 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // --- Socket.io (for Multiplayer attacks) ---
+    // Betting UI Events
+    setBetBtn.addEventListener('click', () => {
+        const amount = parseInt(betAmountInput.value);
+        if (isNaN(amount) || amount < 0) {
+            alert("올바른 금액을 입력하세요.");
+            return;
+        }
+        if (amount > myCoins) {
+            alert("보유 코인이 부족합니다.");
+            return;
+        }
+        currentBet = amount;
+        socket.emit('placeBet', { roomId: currentRoomId, amount: currentBet, userId: currentUser.uid });
+        addSystemMessage(`내기 금액이 ${currentBet}코인으로 설정되었습니다.`);
+    });
+
+    depositBtn.addEventListener('click', () => {
+        // Placeholder for deposit logic
+        alert("입금 기능은 준비 중입니다. (테스트용으로 1000코인 지급)");
+        if (currentUser) {
+            firestore.collection('users').doc(currentUser.uid).update({
+                coins: firebase.firestore.FieldValue.increment(1000)
+            });
+        }
+    });
+
+    withdrawBtn.addEventListener('click', () => {
+        alert("출금 기능은 준비 중입니다.");
+    });
+
+    // --- Socket.io ---
     const socket = io();
+    socket.emit('joinRoom', currentRoomId);
 
     socket.on('garbage', (lines) => {
         addGarbage(lines);
         addSystemMessage(`공격받음! ${lines}줄 추가됨!`);
     });
 
+    socket.on('betPlaced', ({ userId, amount }) => {
+        if (userId !== currentUser?.uid) {
+            addSystemMessage(`상대방이 ${amount}코인을 걸었습니다.`);
+        }
+    });
+
+    socket.on('matchResult', async ({ winnerId, loserId, winnerPrize, serverFee }) => {
+        if (currentUser && currentUser.uid === winnerId) {
+            addSystemMessage(`승리! ${winnerPrize}코인을 획득했습니다! (수수료 ${serverFee} 차감)`);
+            await firestore.collection('users').doc(currentUser.uid).update({
+                coins: firebase.firestore.FieldValue.increment(winnerPrize)
+            });
+            // Update server total (optional)
+            firestore.collection('system').doc('stats').set({
+                serverTotal: firebase.firestore.FieldValue.increment(serverFee)
+            }, { merge: true });
+        } else if (currentUser && currentUser.uid === loserId) {
+            addSystemMessage(`패배... ${currentBet}코인을 잃었습니다.`);
+            await firestore.collection('users').doc(currentUser.uid).update({
+                coins: firebase.firestore.FieldValue.increment(-currentBet)
+            });
+        }
+    });
+
     // --- Firebase RTDB Chat ---
-    // Listen for new messages
     const chatRef = db.ref('messages').limitToLast(50);
     chatRef.on('child_added', (snapshot) => {
         const msg = snapshot.val();
@@ -128,24 +224,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const nextContext = nextCanvas.getContext('2d');
     const holdContext = holdCanvas.getContext('2d');
 
-    // Scale - Enlarge (400x800 canvas)
-    const BLOCK_SIZE = 40; 
-    const NEXT_BLOCK_SIZE = 25;
-    context.scale(BLOCK_SIZE, BLOCK_SIZE);
-    nextContext.scale(NEXT_BLOCK_SIZE, NEXT_BLOCK_SIZE);
-    holdContext.scale(NEXT_BLOCK_SIZE, NEXT_BLOCK_SIZE);
-
-    const scoreElement = document.getElementById('score');
-    const levelElement = document.getElementById('level');
-    const linesElement = document.getElementById('lines');
-    const finalScoreElement = document.getElementById('final-score');
-    
-    const startOverlay = document.getElementById('start-overlay');
-    const gameOverlay = document.getElementById('game-overlay');
-    const startBtn = document.getElementById('start-btn');
-    const restartBtn = document.getElementById('restart-btn');
-
-    // Scale - Enlarge (400x800 canvas)
     const BLOCK_SIZE = 40; 
     const NEXT_BLOCK_SIZE = 25;
     context.scale(BLOCK_SIZE, BLOCK_SIZE);
@@ -183,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Game State
-    const arena = createMatrix(10, 20);
+    let arena = createMatrix(10, 20);
     const player = {
         pos: {x: 0, y: 0},
         matrix: null,
@@ -199,7 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let isPaused = true;
     let requestID = null;
 
-    // Advanced Features
     let nextQueue = [];
     let holdPiece = null;
     let canHold = true; 
@@ -256,13 +333,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         ctx.fillStyle = COLORS[value];
                         ctx.fillRect(x + offset.x, y + offset.y, 1, 1);
-                        
                         ctx.lineWidth = 0.05;
                         ctx.strokeStyle = 'rgba(0,0,0,0.3)';
                         ctx.strokeRect(x + offset.x, y + offset.y, 1, 1);
-                        
-                        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-                        ctx.fillRect(x + offset.x + 0.1, y + offset.y + 0.1, 0.2, 0.2);
                     }
                 }
             });
@@ -296,11 +369,8 @@ document.addEventListener('DOMContentLoaded', () => {
         let rowCount = 0;
         outer: for (let y = arena.length - 1; y > 0; --y) {
             for (let x = 0; x < arena[y].length; ++x) {
-                if (arena[y][x] === 0) {
-                    continue outer;
-                }
+                if (arena[y][x] === 0) continue outer;
             }
-            
             const row = arena.splice(y, 1)[0].fill(0);
             arena.unshift(row);
             ++y;
@@ -315,28 +385,21 @@ document.addEventListener('DOMContentLoaded', () => {
             dropInterval = Math.max(100, 1000 - (player.level - 1) * 100);
 
             if (rowCount === 4) {
-                socket.emit('attack', 4); 
+                socket.emit('attack', { roomId: currentRoomId, lines: 4 }); 
                 addSystemMessage("테트리스! 공격을 보냈습니다!");
             }
-
             updateStats();
         }
     }
 
     function playerReset() {
         if (nextQueue.length === 0) fillQueue();
-        
         player.matrix = nextQueue.shift();
         fillQueue(); 
-        
         player.pos.y = 0;
         player.pos.x = (arena[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
-        
         canHold = true; 
-
-        if (collide(arena, player)) {
-            gameOver();
-        }
+        if (collide(arena, player)) gameOver();
     }
 
     function fillQueue() {
@@ -358,9 +421,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function playerMove(dir) {
         player.pos.x += dir;
-        if (collide(arena, player)) {
-            player.pos.x -= dir;
-        }
+        if (collide(arena, player)) player.pos.x -= dir;
     }
 
     function playerRotate(dir) {
@@ -389,9 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function hardDrop() {
-        while (!collide(arena, player)) {
-            player.pos.y++;
-        }
+        while (!collide(arena, player)) player.pos.y++;
         player.pos.y--; 
         merge(arena, player);
         arenaSweep();
@@ -401,7 +460,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function hold() {
         if (!canHold) return;
-
         if (holdPiece === null) {
             holdPiece = player.matrix;
             playerReset(); 
@@ -416,9 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function addGarbage(lines) {
-        for (let i = 0; i < lines; i++) {
-            arena.shift(); 
-        }
+        for (let i = 0; i < lines; i++) arena.shift(); 
         for (let i = 0; i < lines; i++) {
             const row = new Array(10).fill(8); 
             const hole = Math.floor(Math.random() * 10);
@@ -429,15 +485,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function update(time = 0) {
         if (isPaused || isGameOver) return;
-
         const deltaTime = time - lastTime;
         lastTime = time;
-
         dropCounter += deltaTime;
-        if (dropCounter > dropInterval) {
-            playerDrop();
-        }
-
+        if (dropCounter > dropInterval) playerDrop();
         draw();
         requestID = requestAnimationFrame(update);
     }
@@ -453,7 +504,12 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelAnimationFrame(requestID);
         finalScoreElement.innerText = player.score;
         gameOverlay.classList.add('active');
-        addSystemMessage("게임 오버! 다시 도전하세요.");
+        addSystemMessage("게임 오버!");
+        
+        // Notify server for betting
+        if (currentUser) {
+            socket.emit('gameOver', { roomId: currentRoomId, userId: currentUser.uid });
+        }
     }
 
     function resetGame() {
@@ -468,10 +524,8 @@ document.addEventListener('DOMContentLoaded', () => {
         playerReset();
         isGameOver = false;
         isPaused = false;
-        
         startOverlay.classList.remove('active');
         gameOverlay.classList.remove('active');
-        
         update();
     }
 

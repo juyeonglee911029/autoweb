@@ -1,4 +1,22 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM Elements ---
+    const loginBtn = document.getElementById('login-btn');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    const chatMessages = document.getElementById('chat-messages');
+    const canvas = document.getElementById('tetris-canvas');
+    const nextCanvas = document.getElementById('next-canvas');
+    const holdCanvas = document.getElementById('hold-canvas');
+    const scoreElement = document.getElementById('score');
+    const levelElement = document.getElementById('level');
+    const linesElement = document.getElementById('lines');
+    const finalScoreElement = document.getElementById('final-score');
+    const startOverlay = document.getElementById('start-overlay');
+    const startOverlayText = document.querySelector('#start-overlay p');
+    const gameOverlay = document.getElementById('game-overlay');
+    const startBtn = document.getElementById('start-btn');
+    const restartBtn = document.getElementById('restart-btn');
+
     // --- Firebase Configuration ---
     const firebaseConfig = {
         apiKey: "AIzaSyApH0U10lGxtcdtQ7fNSYJ7Iz4F5lRfpPA",
@@ -21,9 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Auth & Profile ---
     let myName = 'Guest';
     let currentUser = null;
-
-    const loginBtn = document.getElementById('login-btn');
-    const startOverlayText = document.querySelector('#start-overlay p');
 
     loginBtn.addEventListener('click', () => {
         if (currentUser) {
@@ -66,10 +81,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- Firebase RTDB Chat ---
-    const chatInput = document.getElementById('chat-input');
-    const sendBtn = document.getElementById('send-btn');
-    const chatMessages = document.getElementById('chat-messages');
-
     // Listen for new messages
     const chatRef = db.ref('messages').limitToLast(50);
     chatRef.on('child_added', (snapshot) => {
@@ -113,12 +124,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     // --- Tetris Game Logic ---
-    const canvas = document.getElementById('tetris-canvas');
     const context = canvas.getContext('2d');
-    const nextCanvas = document.getElementById('next-canvas');
     const nextContext = nextCanvas.getContext('2d');
-    const holdCanvas = document.getElementById('hold-canvas');
     const holdContext = holdCanvas.getContext('2d');
+
+    // Scale - Enlarge (400x800 canvas)
+    const BLOCK_SIZE = 40; 
+    const NEXT_BLOCK_SIZE = 25;
+    context.scale(BLOCK_SIZE, BLOCK_SIZE);
+    nextContext.scale(NEXT_BLOCK_SIZE, NEXT_BLOCK_SIZE);
+    holdContext.scale(NEXT_BLOCK_SIZE, NEXT_BLOCK_SIZE);
 
     const scoreElement = document.getElementById('score');
     const levelElement = document.getElementById('level');

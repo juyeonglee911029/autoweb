@@ -1,14 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- Firebase Configuration ---
-    // User: Please replace these with your actual Firebase project configuration from the Firebase Console
     const firebaseConfig = {
-        apiKey: "YOUR_API_KEY",
-        authDomain: "pupu-tetris-default-rtdb.firebaseapp.com",
+        apiKey: "AIzaSyApH0U10lGxtcdtQ7fNSYJ7Iz4F5lRfpPA",
+        authDomain: "pupu-tetris.firebaseapp.com",
         databaseURL: "https://pupu-tetris-default-rtdb.firebaseio.com",
-        projectId: "pupu-tetris-default-rtdb",
-        storageBucket: "pupu-tetris-default-rtdb.appspot.com",
-        messagingSenderId: "YOUR_SENDER_ID",
-        appId: "YOUR_APP_ID"
+        projectId: "pupu-tetris",
+        storageBucket: "pupu-tetris.firebasestorage.app",
+        messagingSenderId: "357553125670",
+        appId: "1:357553125670:web:e4a7ff58c177fe3fe7a9e7",
+        measurementId: "G-SPG68G1FLZ"
     };
 
     // Initialize Firebase
@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentUser = null;
 
     const loginBtn = document.getElementById('login-btn');
+    const startOverlayText = document.querySelector('#start-overlay p');
 
     loginBtn.addEventListener('click', () => {
         if (currentUser) {
@@ -42,11 +43,17 @@ document.addEventListener('DOMContentLoaded', () => {
             myName = user.displayName || 'User';
             loginBtn.innerText = '로그아웃';
             addSystemMessage(`${myName}님으로 로그인되었습니다.`);
+            startOverlayText.innerText = "준비 되셨나요?";
+            startBtn.disabled = false;
+            startBtn.style.opacity = "1";
         } else {
             currentUser = null;
             myName = 'Guest' + Math.floor(Math.random() * 1000);
             loginBtn.innerText = '로그인';
-            addSystemMessage(`GUEST 모드 (${myName})`);
+            addSystemMessage(`로그인이 필요합니다.`);
+            startOverlayText.innerText = "게임을 하시려면 로그인이 필요합니다.";
+            startBtn.disabled = true;
+            startBtn.style.opacity = "0.5";
         }
     });
 

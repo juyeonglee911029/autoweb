@@ -633,3 +633,23 @@ File changed: auto_push_watcher.log
 File changed: auto_push_watcher.log
 File changed: auto_push_watcher.log
 Running auto_upload.sh...
+File changed: auto_push_watcher.log
+Output: Starting automatic upload...
+[main 7f9caf7] Auto-upload: 2026-02-28 19:45:28
+ 4 files changed, 981 insertions(+), 1094 deletions(-)
+Pushing to GitHub...
+Upload successful!
+Error Output: To https://github.com/juyeonglee911029/autoweb.git
+   41bcf87..7f9caf7  main -> main
+File changed: auto_push_watcher.log
+File changed: auto_push_watcher.log
+File changed: auto_push_watcher.log
+File changed: auto_push_watcher.log
+File changed: auto_push_watcher.log
+File changed: auto_push_watcher.log
+File changed: auto_push_watcher.log
+File changed: auto_push_watcher.log
+File changed: auto_push_watcher.log
+File changed: auto_push_watcher.log
+File changed: package.json
+Running auto_upload.sh...

@@ -2,274 +2,280 @@
 <html lang="ko" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PUPU Tetris Battle</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PUPU Tetris Battle Pro</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@300;400;600;700&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    
     <link rel="stylesheet" href="style.css">
     
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <!-- Firebase SDKs (Compatibility Mode) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
     
     <!-- Socket.io -->
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
+    <div class="app-background">
+        <div class="bg-shape shape-1"></div>
+        <div class="bg-shape shape-2"></div>
+    </div>
+
     <div class="app-container">
         <!-- Header -->
-        <header class="main-header">
-            <div class="logo">
-                <span class="logo-icon">🧩</span>
-                <h1>PUPU TETRIS</h1>
+        <header class="glass-panel header">
+            <div class="logo-area">
+                <div class="logo-icon">🧩</div>
+                <div class="logo-text">
+                    <h1>PUPU<span class="highlight">TETRIS</span></h1>
+                    <span class="version">v2.0 PRO</span>
+                </div>
             </div>
-            <div class="header-controls">
-                <div class="jackpot-display">
+
+            <div class="header-stats">
+                <div class="stat-item jackpot">
                     <span class="label">JACKPOT</span>
-                    <span class="amount" id="jackpot-amount">0</span>
+                    <span class="value" id="jackpot-amount">1,250</span>
                     <span class="currency">USDT</span>
                 </div>
-                <div class="user-profile">
-                    <div class="balance" id="deposit-btn">
-                        <span class="icon">💰</span>
-                        <span id="user-coins">0</span>
-                    </div>
-                    <div class="user-info">
-                        <span id="display-name">Guest</span>
-                    </div>
-                    <button id="login-btn" class="btn small">
-                        <span class="btn-icon">👤</span><span class="btn-text">LOGIN</span>
-                    </button>
-                    <button id="withdraw-btn" class="btn small outline">
-                        <span class="btn-icon">💸</span>
-                    </button>
-                    <button id="dark-mode-toggle" class="btn icon-only">
-                        🌙
+            </div>
+
+            <div class="user-controls">
+                <div id="auth-section" class="auth-wrapper">
+                    <button id="login-btn" class="btn primary glow">
+                        <span class="icon">G</span> Login
                     </button>
                 </div>
+                
+                <div id="user-profile" class="profile-wrapper hidden">
+                    <div class="balance-display" id="deposit-btn">
+                        <span class="icon">💰</span>
+                        <span id="user-balance" class="value">0</span>
+                        <span class="currency">USDT</span>
+                    </div>
+                    <div class="avatar">
+                        <img id="user-avatar" src="https://ui-avatars.com/api/?name=Guest&background=random" alt="User">
+                    </div>
+                    <div class="dropdown-menu">
+                        <div class="menu-item" id="withdraw-btn">Withdraw</div>
+                        <div class="menu-item danger" id="logout-btn">Logout</div>
+                    </div>
+                </div>
+
+                <button id="theme-toggle" class="btn icon-only" title="Toggle Theme">
+                    🌙
+                </button>
             </div>
         </header>
 
-        <!-- Main Content -->
-        <main class="game-area">
+        <!-- Main Game Area -->
+        <main class="main-content">
+            
             <!-- Left Panel: Chat & Logs -->
-            <section class="panel side-panel left-panel">
+            <aside class="side-panel left glass-panel">
                 <div class="panel-header">
-                    <h3>LIVE CHAT</h3>
+                    <h3>📢 LIVE CHAT</h3>
+                    <span class="online-count">● <span id="online-users">1</span> Online</span>
                 </div>
-                <div class="chat-container">
-                    <div class="messages" id="chat-messages">
-                        <div class="message system">Welcome to Tetris Battle!</div>
+                <div class="chat-wrapper">
+                    <div class="chat-messages custom-scroll" id="chat-messages">
+                        <div class="msg system">Welcome to Pupu Tetris Battle!</div>
                     </div>
-                    <div class="chat-input-area">
-                        <input type="text" id="chat-input" placeholder="Type a message...">
-                        <button id="send-btn">➤</button>
+                    <div class="chat-input">
+                        <input type="text" id="chat-input" placeholder="Say something..." autocomplete="off">
+                        <button id="send-btn" class="btn icon-only">➤</button>
                     </div>
                 </div>
-            </section>
+            </aside>
 
-            <!-- Center: Game Board -->
-            <section class="game-board-container">
-                <!-- Battle HUD -->
-                <div class="battle-hud">
-                    <div class="player-hud local">
-                        <div class="player-info">
-                            <span class="badge" id="local-ready-badge">READY</span>
-                            <span class="name" id="local-name">Me</span>
+            <!-- Center: The Battle Arena -->
+            <section class="arena-container">
+                
+                <!-- HUD: Heads Up Display -->
+                <div class="battle-hud glass-panel">
+                    <!-- Player (Left) -->
+                    <div class="player-card local">
+                        <div class="card-info">
+                            <span class="name" id="local-name">Guest</span>
+                            <div class="status-badge" id="local-status">WAITING</div>
                         </div>
-                        <div class="score-box">
-                            <div class="label">WINS</div>
-                            <div class="value" id="local-wins">0</div>
+                        <div class="score-display">
+                            <span class="label">WINS</span>
+                            <span class="score" id="local-wins">0</span>
                         </div>
                     </div>
+
+                    <!-- Center Info -->
+                    <div class="match-info">
+                        <div class="round-timer" id="game-timer">00:00</div>
+                        <div class="pot-info">
+                            <span>POT: </span><span id="current-pot" class="highlight">20</span> USDT
+                        </div>
+                        <div class="round-badge" id="round-badge">ROUND 1</div>
+                    </div>
+
+                    <!-- Opponent (Right) -->
+                    <div class="player-card remote">
+                        <div class="score-display">
+                            <span class="label">WINS</span>
+                            <span class="score" id="remote-wins">0</span>
+                        </div>
+                        <div class="card-info">
+                            <span class="name" id="remote-name">Searching...</span>
+                            <div class="status-badge" id="remote-status">...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Game Canvases -->
+                <div class="game-view">
                     
-                    <div class="round-info">
-                        <div class="round-badge" id="round-display">ROUND 1</div>
-                        <div class="pot-display">
-                            <span>POT: </span><span id="current-pot">20</span> USDT
+                    <!-- Sidebar Left: Hold & Stats -->
+                    <div class="game-sidebar left">
+                        <div class="mini-panel hold-panel glass-panel">
+                            <span class="panel-label">HOLD</span>
+                            <canvas id="hold-canvas" width="80" height="80"></canvas>
                         </div>
-                        <div class="timer" id="game-timer">00:00</div>
-                    </div>
-
-                    <div class="player-hud remote">
-                        <div class="player-info">
-                            <span class="name" id="remote-name">Opponent</span>
-                            <span class="badge" id="remote-ready-badge">WAITING</span>
-                        </div>
-                        <div class="score-box">
-                            <div class="label">WINS</div>
-                            <div class="value" id="remote-wins">0</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="canvases-wrapper">
-                    <!-- Hold Piece -->
-                    <div class="sub-canvas-container left">
-                        <div class="label">HOLD</div>
-                        <canvas id="hold-canvas" width="100" height="100"></canvas>
                         
-                        <!-- Stats -->
-                        <div class="stats-box">
+                        <div class="stats-panel glass-panel">
                             <div class="stat-row">
-                                <span>SCORE</span>
-                                <span id="score">0</span>
+                                <span class="label">SCORE</span>
+                                <span class="val" id="score-val">0</span>
                             </div>
                             <div class="stat-row">
-                                <span>LINES</span>
-                                <span id="lines">0</span>
+                                <span class="label">LINES</span>
+                                <span class="val" id="lines-val">0</span>
                             </div>
                             <div class="stat-row">
-                                <span>LEVEL</span>
-                                <span id="level">1</span>
+                                <span class="label">COMBO</span>
+                                <span class="val highlight" id="combo-val">0</span>
                             </div>
                         </div>
 
-                         <div class="attack-bar-container">
-                            <div class="bar-label">ATK</div>
-                            <div class="bar-track">
-                                <div class="bar-fill" id="attack-bar" style="height: 0%"></div>
+                        <div class="meter-container">
+                            <div class="meter-label">ATK</div>
+                            <div class="meter-track">
+                                <div class="meter-fill attack" id="attack-meter" style="height: 0%"></div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Main Canvas -->
-                    <div class="main-canvas-container">
+                    <!-- Main Board -->
+                    <div class="main-board glass-panel">
                         <canvas id="tetris-canvas" width="240" height="400"></canvas>
                         
-                        <!-- Overlays -->
-                        <div id="start-overlay" class="overlay active">
+                        <!-- Overlay: Ready / Countdown / Game Over -->
+                        <div id="game-overlay" class="overlay active">
                             <div class="overlay-content">
-                                <h2>READY TO BATTLE?</h2>
-                                <p>BO3 • Initial Bet: 10 USDT</p>
-                                <button id="ready-btn" class="btn large pulse">READY</button>
-                                <div id="countdown-display" class="hidden">5</div>
-                            </div>
-                        </div>
-                        
-                        <div id="game-overlay" class="overlay">
-                            <div class="overlay-content">
-                                <h2 id="overlay-title">ROUND OVER</h2>
-                                <div id="round-result-details"></div>
+                                <h2 id="overlay-title">READY?</h2>
+                                <p id="overlay-subtitle">Initial Bet: 10 USDT</p>
+                                <button id="ready-btn" class="btn large pulse primary">I'M READY</button>
+                                <div id="countdown" class="countdown hidden">3</div>
                             </div>
                         </div>
 
-                        <!-- Effects Container -->
-                        <div id="effects-container"></div>
+                        <!-- Effects Layer -->
+                        <div id="fx-container" class="fx-layer"></div>
                     </div>
 
-                    <!-- Next Piece -->
-                    <div class="sub-canvas-container right">
-                        <div class="label">NEXT</div>
-                        <canvas id="next-canvas" width="100" height="100"></canvas>
-                        
-                        <div class="defense-bar-container">
-                            <div class="bar-label">DEF</div>
-                            <div class="bar-track">
-                                <div class="bar-fill" id="defense-bar" style="height: 0%"></div>
+                    <!-- Sidebar Right: Next & Queue -->
+                    <div class="game-sidebar right">
+                        <div class="mini-panel next-panel glass-panel">
+                            <span class="panel-label">NEXT</span>
+                            <canvas id="next-canvas" width="80" height="200"></canvas>
+                        </div>
+
+                        <div class="meter-container">
+                            <div class="meter-label">DEF</div>
+                            <div class="meter-track">
+                                <div class="meter-fill defense" id="defense-meter" style="height: 0%"></div>
+                                <div class="garbage-queue" id="garbage-queue"></div>
                             </div>
-                             <div class="garbage-indicator" id="garbage-queue">
-                                <!-- Red blocks for pending garbage -->
-                             </div>
                         </div>
                     </div>
+
                 </div>
             </section>
 
-            <!-- Right Panel: Controls & Help -->
-            <section class="panel side-panel right-panel">
+            <!-- Right Panel: Controls & History -->
+            <aside class="side-panel right glass-panel">
                 <div class="panel-header">
-                    <h3>CONTROLS</h3>
+                    <h3>🎮 CONTROLS</h3>
                 </div>
-                <div class="controls-guide">
-                    <div class="key-row"><span class="key">←</span><span class="key">→</span> Move</div>
-                    <div class="key-row"><span class="key">↑</span> Rotate</div>
-                    <div class="key-row"><span class="key">↓</span> Soft Drop</div>
-                    <div class="key-row"><span class="key wide">SPACE</span> Hard Drop</div>
-                    <div class="key-row"><span class="key">Z</span> Hold</div>
+                <div class="controls-grid">
+                    <div class="key-item"><span class="key">←</span><span class="key">→</span><span>Move</span></div>
+                    <div class="key-item"><span class="key">↑</span><span>Rotate</span></div>
+                    <div class="key-item"><span class="key">↓</span><span>Soft Drop</span></div>
+                    <div class="key-item"><span class="key space">SPACE</span><span>Hard Drop</span></div>
+                    <div class="key-item"><span class="key">Z</span><span>Hold</span></div>
                 </div>
-                
-                <div class="panel-header" style="margin-top: 20px;">
-                    <h3>ATTACK INFO</h3>
+
+                <div class="panel-header mt-20">
+                    <h3>⚔️ ATTACKS</h3>
                 </div>
-                <div class="attack-guide">
-                     <div class="guide-row"><span>Double</span><span>1 Line</span></div>
-                     <div class="guide-row"><span>Triple</span><span>2 Lines</span></div>
-                     <div class="guide-row"><span>Tetris</span><span>4 Lines</span></div>
-                     <div class="guide-row"><span>T-Spin D</span><span>4 Lines</span></div>
-                     <div class="guide-row"><span>Perfect</span><span>10 Lines</span></div>
+                <div class="attack-table">
+                    <div class="row"><span>Double</span><span class="dmg">1</span></div>
+                    <div class="row"><span>Triple</span><span class="dmg">2</span></div>
+                    <div class="row"><span>Tetris</span><span class="dmg">4</span></div>
+                    <div class="row highlight"><span>T-Spin</span><span class="dmg">2-6</span></div>
                 </div>
-            </section>
+            </aside>
+
         </main>
     </div>
 
     <!-- Modals -->
-    <!-- Deposit Modal -->
-    <div id="deposit-modal" class="modal">
-        <div class="modal-content">
+    <div id="modal-backdrop" class="modal-backdrop">
+        
+        <!-- Deposit Modal -->
+        <div id="deposit-modal" class="modal glass-panel">
             <span class="close-modal">&times;</span>
             <h2>Deposit USDT</h2>
-            <div class="qr-placeholder">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=0x1234567890abcdef" alt="QR Code">
-            </div>
-            <p class="address-label">Deposit Address (TRC20)</p>
-            <div class="address-box">
-                <input type="text" id="deposit-address" value="TEq9...MockAddress...XyZ" readonly>
-                <button id="copy-address-btn">COPY</button>
-            </div>
-            <p class="note">Minimum deposit: 10 USDT</p>
-        </div>
-    </div>
-
-    <!-- Withdraw Modal -->
-    <div id="withdraw-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <h2>Withdraw USDT</h2>
-            <div class="balance-info">
-                <span>Available:</span>
-                <span id="modal-user-coins" class="highlight">0</span> USDT
+            <div class="qr-code">
+                <!-- Placeholder QR -->
+                <div class="qr-box"></div>
             </div>
             <div class="input-group">
-                <label>Withdraw Address</label>
-                <input type="text" id="withdraw-address" placeholder="Enter TRC20 address">
+                <label>TRC20 Address</label>
+                <div class="copy-field">
+                    <input type="text" value="TV...YourWalletAddress...xyz" readonly>
+                    <button class="btn icon-only">📋</button>
+                </div>
             </div>
-            <div class="input-group">
-                <label>Amount</label>
-                <input type="number" id="withdraw-amount" placeholder="Min 10">
-            </div>
-            <button id="confirm-withdraw-btn" class="btn full">REQUEST WITHDRAWAL</button>
+            <p class="note">Send only USDT (TRC20). Min deposit: 10 USDT.</p>
         </div>
-    </div>
 
-    <!-- Proposal Modal (Winner) -->
-    <div id="proposal-modal" class="modal">
-        <div class="modal-content">
-            <h2>🏆 YOU WON THE ROUND!</h2>
+        <!-- Proposal Modal -->
+        <div id="proposal-modal" class="modal glass-panel">
+            <h2>🏆 ROUND WON!</h2>
             <p>Propose the bet for the next round:</p>
-            <div class="bet-options">
-                <button class="btn bet-opt" data-amount="10">10 USDT</button>
-                <button class="btn bet-opt" data-amount="20">20 USDT</button>
-                <button class="btn bet-opt" data-amount="50">50 USDT</button>
+            <div class="bet-grid">
+                <button class="btn bet-opt" data-amt="10">10</button>
+                <button class="btn bet-opt" data-amt="20">20</button>
+                <button class="btn bet-opt" data-amt="50">50</button>
+                <button class="btn bet-opt" data-amt="100">100</button>
             </div>
-            <div class="custom-bet">
-                <input type="number" id="custom-bet-input" placeholder="Custom Amount" min="5" max="100">
-                <button id="propose-custom-btn" class="btn">PROPOSE</button>
+            <div class="custom-input">
+                <input type="number" id="custom-bet" placeholder="Custom Amount">
+                <button id="submit-proposal" class="btn primary">PROPOSE</button>
             </div>
-            <div class="timer-bar"><div class="fill"></div></div>
         </div>
-    </div>
 
-    <!-- Accept Modal (Loser) -->
-    <div id="accept-modal" class="modal">
-        <div class="modal-content">
-            <h2>NEXT ROUND PROPOSAL</h2>
-            <p>The winner proposed a bet of:</p>
-            <div class="proposed-amount"><span id="proposal-amount-display">20</span> USDT</div>
-            <div class="actions">
-                <button id="accept-bet-btn" class="btn success">ACCEPT</button>
-                <button id="reject-bet-btn" class="btn danger">REJECT (End Game)</button>
+        <!-- Accept Modal -->
+        <div id="accept-modal" class="modal glass-panel">
+            <h2>NEXT ROUND</h2>
+            <p>Winner proposes a bet of:</p>
+            <div class="big-amount"><span id="prop-amt">50</span> USDT</div>
+            <div class="modal-actions">
+                <button id="accept-btn" class="btn success full">ACCEPT</button>
+                <button id="reject-btn" class="btn danger full">REJECT (Exit)</button>
             </div>
-            <div class="timer-bar"><div class="fill"></div></div>
+            <div class="timer-bar"><div class="bar"></div></div>
         </div>
     </div>
 
